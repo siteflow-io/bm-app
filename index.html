@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4f46e5">
+<title>Budget Meney</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f8;--surface:#fff;--surface2:#f8f9fc;--border:rgba(0,0,0,.05);--text:#151a2e;--text-dim:#4a5072;--text-muted:#8b91ad;--green:#16a34a;--green-bg:#dcfce7;--orange:#d97706;--orange-bg:#fef3c7;--red:#dc2626;--red-bg:#fee2e2;--accent:#4f46e5;--accent-bg:#eef2ff;--shadow-s:0 1px 2px rgba(0,0,0,.04);--shadow-m:0 4px 14px rgba(0,0,0,.05);--shadow-l:0 12px 32px rgba(0,0,0,.07);--r:18px;--rs:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 16px rgba(0,0,0,.03)}
+.nav-tab{flex:1;padding:10px 0 7px;text-align:center;font-size:9px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:.2s;text-transform:uppercase;letter-spacing:.6px}
+.nav-tab.active{color:var(--accent)}
+.nav-tab svg{display:block;margin:0 auto 2px;width:20px;height:20px}
+.page{display:none;padding:16px 16px 96px;max-width:430px;margin:0 auto;animation:fi .25s ease}
+.page.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hdr{text-align:center;margin-bottom:20px;padding-top:6px}
+.hdr h1{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.hdr p{font-size:12px;color:var(--text-muted);font-weight:500;margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;box-shadow:var(--shadow-m)}
+.card-t{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:none}
+.row-l{font-size:13px;color:var(--text-dim);font-weight:600}
+.row-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+.g{color:var(--green)}.rd{color:var(--red)}.n{color:var(--text)}.o{color:var(--orange)}
+/* Projection (flagellation) */
+.proj{border-radius:var(--r);padding:18px;margin-bottom:12px;box-shadow:var(--shadow-l);border:1px solid var(--border)}
+.proj.ok{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#bbf7d0}
+.proj.warn{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fcd34d}
+.proj.bad{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fca5a5}
+.proj.crit{background:var(--red);border-color:var(--red);animation:blink 1.2s infinite}
+.proj-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;opacity:.75}
+.proj-val{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;line-height:1.05}
+.proj-cible{font-size:12px;font-weight:600;margin-top:4px;opacity:.8}
+.proj-msg{font-size:13px;font-weight:700;margin-top:10px;line-height:1.45}
+.proj.ok *{color:#14532d}.proj.warn *{color:#78350f}.proj.bad *{color:#7f1d1d}.proj.crit *{color:#fff}
+.proj-bar{height:8px;background:rgba(0,0,0,.08);border-radius:4px;overflow:hidden;margin-top:12px}
+.proj.crit .proj-bar{background:rgba(255,255,255,.25)}
+.proj-fill{height:100%;border-radius:4px;transition:width .7s ease}
+.proj-marker{position:relative;height:0}
+/* Trajectoire épargne (motivation) */
+.traj{border-radius:var(--r);padding:18px;margin-bottom:12px;box-shadow:var(--shadow-l);border:1px solid var(--border);background:var(--surface)}
+.traj.up{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:#c7d2fe}
+.traj.down{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fca5a5}
+.traj-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;color:var(--text-muted)}
+.traj.up .traj-lbl{color:#4338ca}.traj.down .traj-lbl{color:#991b1b}
+.traj-main{font-size:15px;font-weight:800;line-height:1.35}
+.traj.up .traj-main{color:#312e81}.traj.down .traj-main{color:#7f1d1d}
+.traj-main .mono{font-family:'JetBrains Mono',monospace}
+.traj-zero{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#dc2626;margin:6px 0 2px}
+.jalons{margin-top:12px}
+.jalon{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(67,56,202,.12);font-size:12px;font-weight:700;color:#3730a3}
+.jalon:last-child{border-bottom:none}
+.jalon .jd{font-family:'JetBrains Mono',monospace;font-weight:600;color:#4f46e5}
+.jalon.done{opacity:.55}.jalon.done .jd{color:#16a34a}
+.traj-note{font-size:11px;font-weight:600;margin-top:10px;color:var(--text-muted);line-height:1.4}
+.traj.down .traj-note{color:#991b1b}
+/* Gauge */
+.gauge{background:var(--surface);border-radius:var(--r);padding:24px 20px;text-align:center;margin-bottom:12px;box-shadow:var(--shadow-l);border:1px solid var(--border);position:relative;overflow:hidden}
+.gauge::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.gauge.ok::after{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.gauge.warn::after{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.gauge.bad::after{background:linear-gradient(90deg,#dc2626,#f87171)}
+.gauge-lbl{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.gauge-val{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;line-height:1;margin-bottom:14px}
+.gauge-track{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;box-shadow:inset 0 2px 3px rgba(0,0,0,.04);margin-bottom:8px}
+.gauge-fill{height:100%;border-radius:5px;transition:width .7s ease,background .4s;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.gauge-sub{font-size:12px;color:var(--text-dim);font-weight:600}
+.gauge-sub span{font-family:'JetBrains Mono',monospace}
+/* Mini enveloppes */
+.env{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.env:last-child{border-bottom:none}
+.env-n{flex:0 0 92px;font-size:12px;font-weight:700;color:var(--text-dim)}
+.env-track{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.env-fill{height:100%;border-radius:4px;transition:width .6s}
+.env-v{flex:0 0 96px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--text-dim)}
+/* Alert */
+.alert{display:none;padding:12px 16px;border-radius:var(--rs);margin-bottom:12px;font-size:12px;font-weight:700;box-shadow:var(--shadow-m)}
+.alert.warn{display:block;background:var(--orange-bg);color:#92400e}
+.alert.danger{display:block;background:var(--red-bg);color:#991b1b}
+.alert.over{display:block;background:var(--red);color:#fff;animation:blink 1s infinite;box-shadow:0 4px 16px rgba(220,38,38,.25)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.8}}
+/* Actions */
+.act-panel{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 4px 12px rgba(245,158,11,.08)}
+.act-panel h3{font-size:12px;font-weight:800;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.act-badge{background:#f59e0b;color:#fff;font-size:10px;padding:1px 7px;border-radius:8px;font-weight:700}
+.act-i{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(252,211,77,.3);font-size:12px;color:#78350f;line-height:1.4;font-weight:600}
+.act-i:last-child{border-bottom:none}
+.act-ck{width:20px;height:20px;min-width:20px;border:2px solid #d97706;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:var(--shadow-s);font-size:11px;transition:.2s}
+.act-ck.done{background:var(--green);border-color:var(--green);color:#fff}
+.act-ck.done+div .act-txt{text-decoration:line-through;color:var(--text-muted)}
+.act-w{font-size:10px;color:#b45309;margin-top:1px;font-weight:500}
+/* Import */
+.imp-zone{background:var(--surface);border:2px dashed var(--accent);border-radius:var(--r);padding:32px 16px;text-align:center;cursor:pointer;margin-bottom:14px;box-shadow:var(--shadow-m);transition:.2s}
+.imp-zone:active{transform:scale(.98);background:var(--accent-bg)}
+.imp-zone svg{width:36px;height:36px;color:var(--accent);margin-bottom:8px}
+.imp-zone h3{font-size:15px;font-weight:800;color:var(--accent);margin-bottom:2px}
+.imp-zone p{font-size:12px;color:var(--text-muted);font-weight:500}
+.imp-sel{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.imp-sel button{flex:1;min-width:80px;padding:10px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text-dim);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-s);transition:.2s}
+.imp-sel button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+/* Score */
+.sc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px 20px;text-align:center;box-shadow:var(--shadow-l);margin-bottom:12px}
+.sc-circ{width:130px;height:130px;margin:0 auto 16px;position:relative;filter:drop-shadow(0 3px 8px rgba(0,0,0,.06))}
+.sc-circ svg{width:100%;height:100%;transform:rotate(-90deg)}
+.sc-circ circle{fill:none;stroke-width:10;stroke-linecap:round}
+.sc-trk{stroke:#eef0f4}
+.sc-fl{transition:stroke-dashoffset .8s ease,stroke .4s}
+.sc-v{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700}
+.sc-lbl{font-size:14px;color:var(--text-dim);font-weight:700}
+/* Rewards */
+.rw-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;border-radius:var(--rs);background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .2s;box-shadow:var(--shadow-s)}
+.rw-item.available{background:#f0fdf4;border-color:#bbf7d0}
+.rw-item.locked{opacity:.35;pointer-events:none}
+.rw-item.checked{background:var(--accent-bg);border-color:#c7d2fe}
+.rw-ck{width:22px;height:22px;min-width:22px;border:2px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;transition:.2s;background:#fff}
+.rw-item.checked .rw-ck{background:var(--accent);border-color:var(--accent);color:#fff}
+.rw-item.available .rw-ck{border-color:#86efac}
+.rw-emoji{font-size:20px;line-height:1}
+.rw-info{flex:1}
+.rw-name{font-size:13px;font-weight:700}
+.rw-price{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text-dim)}
+.rw-rest{text-align:center;margin:14px 0 10px;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700}
+.rw-rest-lbl{text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.btn-engage{width:100%;padding:14px;border:none;border-radius:var(--rs);font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;box-shadow:var(--shadow-m);transition:.2s;margin-top:10px}
+.btn-engage:active{transform:scale(.98)}
+.btn-engage:disabled{opacity:.4;pointer-events:none}
+/* Engagements */
+.eng-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:4px;border-radius:var(--rs);background:var(--accent-bg);border:1px solid #c7d2fe;font-size:12px;font-weight:600}
+.eng-status{font-size:10px;padding:2px 6px;border-radius:5px;font-weight:700}
+.eng-pending{background:var(--orange-bg);color:#92400e}
+.eng-ok{background:var(--green-bg);color:#166534}
+.eng-over{background:var(--red-bg);color:#991b1b}
+/* Charts */
+.chart-wrap{position:relative;height:180px;margin:10px 0}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+/* Rules */
+.rule-block{padding:12px 0;border-bottom:1px solid var(--border)}
+.rule-block:last-child{border-bottom:none}
+.rule-cat{font-size:14px;font-weight:800;margin-bottom:4px}
+.rule-desc{font-size:12px;color:var(--text-dim);line-height:1.5;font-weight:500}
+.last-imp{text-align:center;font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:12px}
+#csvInput{display:none}
+/* Overlays : login + setup */
+.ovl{position:fixed;inset:0;background:var(--bg);z-index:200;display:none;overflow-y:auto;padding:32px 20px}
+.ovl.show{display:block}
+.ovl-box{max-width:380px;margin:0 auto}
+.ovl-box h2{font-size:22px;font-weight:800;text-align:center;margin-bottom:4px}
+.ovl-box .sub{font-size:12px;color:var(--text-muted);text-align:center;font-weight:500;margin-bottom:22px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.fld input{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text);outline:none;transition:.2s}
+.fld input:focus{border-color:var(--accent)}
+.fld input[type=email]{font-family:'Outfit',sans-serif}
+.ovl-err{display:none;background:var(--red-bg);color:#991b1b;font-size:12px;font-weight:700;padding:10px 14px;border-radius:var(--rs);margin-bottom:12px}
+.mode-badge{display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);background:var(--orange-bg);color:#92400e;font-size:10px;font-weight:800;padding:4px 12px;border-radius:10px;z-index:150;box-shadow:var(--shadow-m);text-transform:uppercase;letter-spacing:.6px}
+.mode-badge.show{display:block}
+.cbl{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.cbl:last-child{border-bottom:none}
+.cbl .cv{font-family:'JetBrains Mono',monospace;font-weight:700}
+.pend{background:var(--orange-bg);border:1px solid #fcd34d;border-radius:var(--rs);padding:12px;margin-bottom:8px;font-size:12px;font-weight:600;color:#78350f;line-height:1.5}
+.pend.ready{background:var(--accent-bg);border-color:#c7d2fe;color:#3730a3}
+.pend .pbtns{display:flex;gap:6px;margin-top:8px}
+.pend button{flex:1;padding:9px;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer}
+.pbtn-cancel{background:#fff;color:var(--text-dim);border:1px solid var(--border)!important}
+.pbtn-ok{background:var(--accent);color:#fff}
+select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600}
+/* Icônes d'aide ⓘ — info au tap et au survol */
+.tip-i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;min-width:16px;margin-left:6px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:10px;line-height:1;cursor:pointer;vertical-align:middle;opacity:.55;transition:.15s;-webkit-tap-highlight-color:transparent}
+.tip-i:hover{opacity:1;background:var(--accent-bg)}
+.proj .tip-i,.traj .tip-i{border-color:currentColor;color:inherit;opacity:.5}
+#tipBubble{position:fixed;z-index:999;max-width:300px;background:var(--text);color:#fff;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5;font-weight:500;box-shadow:0 12px 32px rgba(0,0,0,.28);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .15s,transform .15s}
+#tipBubble.show{opacity:1;transform:translateY(0)}
+#tipBubble b{color:#a5b4fc}
+@media(max-width:380px){.gauge-val{font-size:34px}.proj-val{font-size:28px}}
+</style>
+</head>
+<body>
+<input type="file" id="csvInput" accept=".csv"/>
+<div class="mode-badge" id="modeBadge">Mode local — non partagé</div>
+<div id="tipBubble"></div>
+
+<!-- LOGIN -->
+<div class="ovl" id="ovlLogin"><div class="ovl-box">
+<h2>Budget Meney</h2><p class="sub">Connexion au coffre familial<span class="tip-i" data-i="login">i</span></p>
+<div class="ovl-err" id="loginErr"></div>
+<div class="fld"><label>Email</label><input type="email" id="lgEmail" autocomplete="username" placeholder="polomeney@gmail.com"></div>
+<div class="fld"><label>Mot de passe</label><input type="password" id="lgPass" autocomplete="current-password"></div>
+<button class="btn-engage" onclick="doLogin()">Se connecter</button>
+</div></div>
+
+<!-- SETUP SOLDES -->
+<div class="ovl" id="ovlSetup"><div class="ovl-box">
+<h2>Soldes de départ<span class="tip-i" data-i="setup">i</span></h2><p class="sub">Saisis les soldes du jour, une seule fois. Ils servent de point zéro à toutes les projections.</p>
+<div id="setupFields"></div>
+<button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
+</div></div>
+
+<!-- BUDGET -->
+<div class="page active" id="p1">
+<div class="hdr"><h1>Budget Meney</h1><p id="curDate"></p></div>
+<div class="alert" id="alertB"></div>
+<div class="proj ok" id="projBox">
+<div class="proj-lbl">Projection fin de mois<span class="tip-i" data-i="proj">i</span></div>
+<div class="proj-val" id="projVal">--</div>
+<div class="proj-cible">Cible : <span id="projCible">4 400 €</span> · dépensé à ce jour : <span id="projSpent">--</span></div>
+<div class="proj-bar"><div class="proj-fill" id="projFill" style="width:0%;background:#16a34a"></div></div>
+<div class="proj-msg" id="projMsg"></div>
+</div>
+<div class="traj" id="trajBox">
+<div class="traj-lbl"><span id="trajLbl">Trajectoire d'épargne</span><span class="tip-i" data-i="traj">i</span></div>
+<div class="traj-main" id="trajMain">Importe les CSV pour calculer la trajectoire.</div>
+<div id="trajZero"></div>
+<div class="jalons" id="trajJalons"></div>
+<div class="traj-note" id="trajNote"></div>
+</div>
+<div class="act-panel" id="actP"><h3>⚠️ Optimisations <span class="act-badge" id="actN"></span><span class="tip-i" data-i="actions">i</span></h3><div id="actGains" style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px"></div><div id="actL"></div></div>
+<div class="card"><div class="card-t">Enveloppes du mois<span class="tip-i" data-i="env">i</span></div><div id="envList"></div></div>
+<div class="card"><div class="card-t">Revenus du mois<span class="tip-i" data-i="rev">i</span></div><div id="revList"></div></div>
+<div class="card"><div class="card-t">Dépenses du mois<span class="tip-i" data-i="dep">i</span></div><div id="depList"></div></div>
+<div class="card"><div class="card-t">Comptes<span class="tip-i" data-i="cpt">i</span></div><div id="cptList"></div>
+<div class="row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px"><div class="row-l" style="font-weight:800;color:var(--text)">Liquidités + épargne</div><div class="row-v" id="patN" style="font-size:15px">--</div></div>
+</div>
+<div class="last-imp">Dernier import : <span id="lastImp">aucun</span><span class="tip-i" data-i="lastimp">i</span></div>
+</div>
+
+<!-- IMPORT -->
+<div class="page" id="p2">
+<div class="hdr"><h1>Importer</h1><p>CSV Caisse d'Épargne — détection auto du compte</p></div>
+<div style="text-align:right;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Compte de destination</span><span class="tip-i" data-i="impsel">i</span></div><div class="imp-sel" id="accSel"></div>
+<div class="imp-zone" id="impZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><h3>Importer un ou plusieurs CSV</h3><p>Les opérations déjà connues sont ignorées</p></div><div style="text-align:center;margin:-8px 0 12px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Comment ça marche</span><span class="tip-i" data-i="impzone">i</span></div>
+<div class="card" id="impRes" style="display:none"><div class="card-t">Résultat</div><div id="impSum"></div></div>
+<div class="card"><div class="card-t">Comptes suivis<span class="tip-i" data-i="cptadm">i</span></div><div id="cptAdmin"></div>
+<button class="btn-engage" style="margin-top:8px;background:var(--surface);color:var(--accent);border:2px solid var(--accent);box-shadow:none" onclick="togAddCpt()">＋ Ajouter un compte</button>
+<div id="addCptForm" style="display:none;margin-top:12px">
+<div class="fld"><label>Libellé</label><input type="text" id="acLbl" placeholder="Livret B"></div>
+<div class="fld"><label>Numéro de compte (pour la détection auto du CSV)</label><input type="text" id="acNum" placeholder="04119…"></div>
+<div class="fld"><label>Type</label><select id="acType" style="width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600"><option value="courant">Compte courant</option><option value="epargne">Épargne</option></select></div>
+<div class="fld"><label>Solde du jour</label><input type="number" step="0.01" id="acSolde" placeholder="0.00"></div>
+<button class="btn-engage" onclick="addCompte()">Ajouter</button>
+</div></div>
+</div>
+
+<!-- ENVIES -->
+<div class="page" id="p3">
+<div class="hdr"><h1>Récompenses</h1><p>Simulateur de dépenses plaisir<span class="tip-i" data-i="envies">i</span></p></div>
+<div class="rw-rest-lbl">Budget extras disponible</div>
+<div class="rw-rest" id="rwRest">-- €</div>
+<div id="rwList"></div>
+<button class="btn-engage" id="btnEngage" disabled onclick="doEngage()">Valider ces dépenses</button>
+<div class="card" style="margin-top:14px" id="engCard"><div class="card-t">Engagements en cours</div><div id="engList"></div></div>
+</div>
+
+<!-- COURBES -->
+<div class="page" id="p4">
+<div class="hdr"><h1>Évolution</h1><p>Suivi dans le temps</p></div>
+<div class="card"><div class="card-t">Dépenses totales par mois<span class="tip-i" data-i="chtot">i</span></div><div class="chart-wrap"><canvas id="chartTotal"></canvas></div></div>
+<div class="card"><div class="card-t">Épargne : réel et projection<span class="tip-i" data-i="chep">i</span></div><div class="chart-wrap"><canvas id="chartEpargne"></canvas></div></div>
+</div>
+
+<!-- SCORE -->
+<div class="page" id="p5">
+<div class="hdr"><h1>Discipline</h1><p>Score mensuel<span class="tip-i" data-i="score">i</span></p></div>
+<div class="sc-card"><div class="sc-circ"><svg viewBox="0 0 130 130"><circle class="sc-trk" cx="65" cy="65" r="54"/><circle class="sc-fl" id="scFl" cx="65" cy="65" r="54" stroke-dasharray="339.3" stroke-dashoffset="339.3"/></svg><div class="sc-v" id="scV">--</div></div><div class="sc-lbl" id="scLbl">Importe un CSV</div></div>
+<div class="card"><div class="card-t">Critères</div>
+<div class="row"><div class="row-l">Trajectoire du mois</div><div class="row-v" id="sc1">--</div></div>
+<div class="row"><div class="row-l">Import régulier</div><div class="row-v" id="sc2">--</div></div>
+<div class="row"><div class="row-l">Épargne du mois précédent</div><div class="row-v" id="sc3">--</div></div>
+<div class="row"><div class="row-l">Pas de découvert</div><div class="row-v" id="sc4">--</div></div>
+</div>
+</div>
+
+<!-- RÈGLES -->
+<div class="page" id="p6">
+<div class="hdr"><h1>Règles</h1><p>Le contrat — verrou intelligent sur les cibles</p></div>
+<div class="card"><div class="card-t">Cibles en vigueur<span class="tip-i" data-i="cibles">i</span></div><div id="ciblesList"></div></div>
+<div class="card"><div class="card-t">Demandes en cours<span class="tip-i" data-i="pending">i</span></div><div id="pendList"></div></div>
+<div class="card"><div class="card-t">Modifier une cible<span class="tip-i" data-i="verrou">i</span></div>
+<div class="fld"><label>Cible</label><select class="inp" id="modChamp"></select></div>
+<div class="fld"><label>Nouvelle valeur (€/mois)</label><input type="number" step="1" id="modVal" placeholder="0"></div>
+<button class="btn-engage" onclick="demanderCible()">Demander la modification</button>
+<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:10px;line-height:1.5">Durcir une cible s'applique immédiatement. L'adoucir déclenche 72 h de réflexion : tu demandes aujourd'hui, tu confirmes après-demain — ou Claire approuve à distance et c'est immédiat. Annuler est toujours gratuit. Personne n'approuve sa propre demande.</div>
+</div>
+<div class="card"><div class="card-t">Journal des modifications<span class="tip-i" data-i="journal">i</span></div><div id="journalList"></div></div>
+<div class="card">
+<div class="rule-block"><div class="rule-cat">🎯 Cible : 4 400 €/mois toutes dépenses</div><div class="rule-desc">Le foyer gagne environ 5 300 €/mois. Dépenser 4 400 € maximum = 900 € d'épargne mensuelle. C'est LE chiffre que surveille l'appli : le total, pas seulement les extras.</div></div>
+<div class="rule-block"><div class="rule-cat">🔁 Virements internes neutralisés</div><div class="rule-desc">Les virements entre vos comptes (Paul, Claire, commun, Livret A) ne sont ni des revenus ni des dépenses. L'appli les détecte et les exclut de tous les calculs.</div></div>
+<div class="rule-block"><div class="rule-cat">💰 Revenus</div><div class="rule-desc">Salaires Paul et Claire, CAF, remboursements CPAM et prévoyance. Détaillés ligne par ligne.</div></div>
+<div class="rule-block"><div class="rule-cat">🔒 Charges fixes — ≈ 2 450 €/mois</div><div class="rule-desc">Emprunts, assurances, télécom, énergie, eau, impôts, CESU, école, cotisations bancaires, salle de sport, prévoyance. Suivies mais non plafonnées : elles ne bougent qu'en résiliant.</div></div>
+<div class="rule-block"><div class="rule-cat">🥖 Courses — 1 000 €/mois</div><div class="rule-desc">Alimentation : supermarchés, boulangerie, boucherie, marché.</div></div>
+<div class="rule-block"><div class="rule-cat">⛽ Carburant — 220 €/mois</div><div class="rule-desc">Trajets domicile-travail et déplacements courants.</div></div>
+<div class="rule-block"><div class="rule-cat">🩺 Santé — 150 €/mois provisionné</div><div class="rule-desc">Médecins, pharmacie, psy (chèques), suivi fertilité. Cumulable.</div></div>
+<div class="rule-block"><div class="rule-cat">🔨 Travaux — 200 €/mois provisionné</div><div class="rule-desc">Bricolage et entretien maison courant. Cumulable. Les travaux fissures ont leur circuit à part, hors appli.</div></div>
+<div class="rule-block"><div class="rule-cat">📱 Abonnements — 80 €/mois</div><div class="rule-desc">Toutes les dépenses numériques récurrentes et frais CB internationales associés. Chaque doublon détecté est signalé dans À faire.</div></div>
+<div class="rule-block"><div class="rule-cat">💎 Extras — 300 €/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire ce mois-ci : restos, cafés, spa, coiffeur, beauté, shopping, sorties, jardinerie, tabac, retraits, PayPal non identifié, dons ponctuels.</div></div>
+<div class="rule-block"><div class="rule-cat">🐷 Épargne — 900 €/mois</div><div class="rule-desc">L'objectif. Chaque euro sous la cible de dépenses est un euro d'épargne. L'appli affiche en permanence la date à laquelle chaque palier (30 000, 40 000, 50 000 €) sera atteint à ton rythme réel.</div></div>
+<div class="rule-block"><div class="rule-cat">⚖️ Le principe</div><div class="rule-desc">L'appli extrapole ta trajectoire dès le début du mois et t'alerte quand il est encore temps d'agir — pas le 31. Les cibles se modifient uniquement par le verrou intelligent ci-dessus : durcir est immédiat, adoucir attend 72 h ou l'accord de l'autre. Toute modification est journalisée.</div></div>
+</div>
+</div>
+
+<nav class="nav">
+<div class="nav-tab active" data-p="p1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Budget</div>
+<div class="nav-tab" data-p="p2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import</div>
+<div class="nav-tab" data-p="p3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Envies</div>
+<div class="nav-tab" data-p="p4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Courbes</div>
+<div class="nav-tab" data-p="p5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Score</div>
+<div class="nav-tab" data-p="p6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Règles</div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+/* ================= CONFIG ================= */
+/* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
+const FIREBASE_CONFIG={
+apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
+authDomain:"budget-meney.firebaseapp.com",
+databaseURL:"https://budget-meney-default-rtdb.europe-west1.firebasedatabase.app",
+projectId:"budget-meney"
+};
+/* Valeurs de premier lancement UNIQUEMENT : dès le premier démarrage elles sont
+   copiées dans budget/config (Firebase ou localStorage) qui devient la seule
+   source de vérité. Modifs ensuite : console Firebase ou Claude — jamais l'UI
+   pour les cibles (une app flagellante ne se désarme pas d'un tap). */
+const CFG_DEFAULTS={
+cible:4400,epargneCible:900,revenusRef:5300,fixesRef:2450,
+env:{courses:1000,carburant:220,sante:150,trav:200,abo:80,ext:300},
+comptes:{paul:{lbl:"Paul",num:"04119545035",type:"courant",ordre:1},claire:{lbl:"Claire",num:"04119543318",type:"courant",ordre:2},commun:{lbl:"Commun",num:"04119047810",type:"courant",ordre:3},epargne:{lbl:"Épargne Madeleine",num:"00135834655",type:"epargne",ordre:4}},
+reglesPerso:{}
+};
+let CFG=null,CIBLE=0,EPARGNE_CIBLE=0,REVENUS_REF=0,FIXES_REF=0,ENV={},COMPTES={};
+function applyCfg(){CIBLE=CFG.cible;EPARGNE_CIBLE=CFG.epargneCible;REVENUS_REF=CFG.revenusRef;FIXES_REF=CFG.fixesRef;ENV=CFG.env;COMPTES=CFG.comptes}
+function comptesTries(){return Object.entries(COMPTES).sort((a,b)=>(a[1].ordre||99)-(b[1].ordre||99))}
+const REWARDS=[
+{emoji:'🍰',name:'Plaisirs du quotidien',cost:10,cats:['Pâtisserie','Glaces','Marché']},
+{emoji:'📖',name:'Livre / BD',cost:15,cats:['Librairie']},
+{emoji:'🎮',name:'Enfants',cost:30,cats:['Hobbies','Jeu','Shopping']},
+{emoji:'🌿',name:'Jardinerie',cost:40,cats:['Jardinerie']},
+{emoji:'⛽',name:'Balade van',cost:40,cats:['Carburant balade']},
+{emoji:'🛒',name:'Shopping',cost:50,cats:['Action (shopping)','Vêtements','Achat Amazon','Shopping']},
+{emoji:'🎭',name:'Culture / loisirs',cost:50,cats:['Sortie culturelle','Cinéma']},
+{emoji:'🍕',name:'Resto / bar / café',cost:60,cats:['Restaurant','Café','Bar']},
+{emoji:'💆',name:'Bien-être',cost:70,cats:['Spa','Massage','Coiffeur','Esthétique','Produits beauté']},
+{emoji:'🏖️',name:'Week-end spontané',cost:200,cats:['Péage (vacances)','Vacances']}
+];
+const ACTIONS_INIT=[
+{t:"Identifier les 3 prélèvements Amazon Payments du 14/10/2025",w:"pay.amazon.fr → historique",d:false},
+{t:"Exporter et ventiler PayPal (~8 300 € depuis mai 2025)",w:"paypal.com → Activité → Télécharger",d:false},
+{t:"Ouvrir le compte dédié travaux fissures (avant les 90 000 €)",w:"Autre banque, sans CB",d:false},
+{t:"Talons de chèques (psy)",w:"Carnet de chèques",d:false}
+];
+/* Libellés d'abonnements/récurrences optimisables (regroupés par le label de catégorisation) */
+const OPTIM_LABELS=['Amazon Prime','Amazon Music','Amazon Media','Amazon Digital','Amazon Kindle','Audible','Numérique','Streaming','Frais bancaires','Vélo Decathlon','Salle sport'];
+
+/* ================= CATÉGORISATION ================= */
+const R=[
+{p:/DRFIP|REMUNERATION/i,c:'rev',l:'Salaire'},{p:/CAF /i,c:'rev',l:'CAF'},{p:/CPAM/i,c:'rev',l:'Remb. CPAM'},{p:/GIE DE PREVOYA|VIR.*PREVOYANCE/i,c:'rev',l:'Remb. prévoyance'},{p:/REM OFFRE CONFORT|REMISE COTISATION/i,c:'rev',l:'Remise cotisation'},{p:/INTERETS/i,c:'rev',l:'Intérêts livret'},
+{p:/ECH PRET|ECHEANCE DE CREDIT/i,c:'fix',l:'Emprunt'},{p:/MACIF/i,c:'fix',l:'Ass. MACIF'},{p:/MAXANCE/i,c:'fix',l:'Ass. Maxance'},{p:/AXA/i,c:'fix',l:'Ass. AXA'},{p:/BPCE ASSUR/i,c:'fix',l:'Ass. BPCE'},{p:/CE BRETAGNE PAYS DE LOIRE/i,c:'fix',l:'Prêt conso'},{p:/CEBPL/i,c:'fix',l:'Ass. CEBPL'},{p:/ASSURANT/i,c:'fix',l:'Ass. Assurant'},{p:/BOUYGUES/i,c:'fix',l:'Bouygues'},{p:/SFR/i,c:'fix',l:'SFR'},{p:/ENGIE/i,c:'fix',l:'Engie'},{p:/SAUR/i,c:'fix',l:'SAUR'},{p:/DGFIP|DIRECTION GENERALE DES FINA/i,c:'fix',l:'Impôts'},{p:/URSSAF/i,c:'fix',l:'CESU'},{p:/ECOLE.*COLLEGE|COLLEGE.*SAINT|INSTITUTION ST ANDRE|ASSOCIATION ECOLE/i,c:'fix',l:'École'},{p:/COTISATION.*CONFORT|COTISATION.*FAMIL/i,c:'fix',l:'Cotis. banque'},{p:/LAFFITTE/i,c:'fix',l:'Téléphone'},{p:/GIEPS|PRLV.*GIEPS/i,c:'fix',l:'Prévoyance'},{p:/CHUBB/i,c:'fix',l:'Ass. Chubb'},{p:/2J SPORTS/i,c:'fix',l:'Salle sport'},{p:/DECATHLON.*LOCAT/i,c:'fix',l:'Vélo Decathlon'},{p:/FORF P\.STAT|FRAIS BANCAIRES|COM CB INT/i,c:'fix',l:'Frais bancaires'},
+{p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/CLAUDE\.AI|ANTHROPIC/i,c:'abo',l:'Numérique'},{p:/ELEVENLABS/i,c:'abo',l:'Numérique'},{p:/NETFLIX|DISNEY|SPOTIFY|DEEZER|CANAL/i,c:'abo',l:'Streaming'},
+{p:/INTERMARCHE|LECLERC|CARREFOUR|SUPER U|UEP ALIM|UEP DAC|SAUDIS|BOULANGE|PAIN DE LA DUCH|BOUCH ST HILAIR|JOSEPH DISTRE|AUX SAVEURS/i,c:'courses',l:'Courses'},
+{p:/TOTAL.*RELAIS|CARBURANT|PO SAUMUR|STATION/i,c:'carburant',l:'Carburant'},{p:/INTER CHALISMAR/i,c:'courses',l:'Courses/Carburant'},
+{p:/BOISSINOT|DOUAIRE|VAN OLDENEEL|MADAME FABLET|PHARMACIE|IMAGERIE|GLEMET|CARDIOLOG/i,c:'sante',l:'Santé'},{p:/ALIX MIOT/i,c:'sante',l:'Fertilité'},{p:/CHEQUE/i,c:'sante',l:'Chèque (psy)'},
+{p:/GRANGERAY|SC AUTOMOBILES|FEU VERT|PATTEE AUTO|S\.M\. AUTOS/i,c:'ess',l:'Véhicule'},
+{p:/BRICOMAN|BRICOMARCHE|BRICO DEPOT|CHAVIGNY|TERRADEO|GAMMVERT|GAMM VERT|MODIS|BMFR|ANJOU BOIS/i,c:'trav',l:'Travaux'},
+{p:/PEAGE|ASF |BOOKING|BKG |DISCOVERCARS|HOTEL/i,c:'vac',l:'Vacances'},
+{p:/RESTO|PIZZA|BRASSERIE|SAINT HILAIR|LA PROMENADE|CROIX BLANCH|MAISON ZUE|MAISON JANNEAU|MAMIE FADA/i,c:'ext',l:'Restaurant'},{p:/SPA D O CLAIRE/i,c:'ext',l:'Spa'},{p:/AMAZON.*PAYMENT|AMAZON EU SARL|AMZN/i,c:'ext',l:'Achat Amazon'},{p:/ACTION\b/i,c:'ext',l:'Action (shopping)'},{p:/KIABI|ARMAND THIERY/i,c:'ext',l:'Vêtements'},{p:/FNAC/i,c:'ext',l:'FNAC'},{p:/DECATHLON/i,c:'ext',l:'Decathlon'},{p:/DISTRE COIFF|PLANITY|COIFF/i,c:'ext',l:'Coiffeur'},{p:/AURA INSTITUT/i,c:'ext',l:'Esthétique'},{p:/BIOPARC|ABBAYE|RESERVE AFRIC|FEVER|BILLETWEB|CAMP DES GIRAF|TICKETMASTER/i,c:'ext',l:'Sortie culturelle'},{p:/PARKING|EASYPARK/i,c:'ext',l:'Parking'},{p:/LAVAGE|SOCH LAV/i,c:'ext',l:'Lavage auto'},{p:/MAXICOFFEE/i,c:'ext',l:'Café'},{p:/SILOE/i,c:'ext',l:'Librairie'},{p:/\bRAL\b/i,c:'ext',l:'Tabac'},{p:/RETRAIT/i,c:'ext',l:'Retrait espèces'},{p:/LAPOSTE/i,c:'ext',l:'La Poste'},{p:/PAYPAL/i,c:'ext',l:'PayPal'},{p:/LE BON COIN/i,c:'ext',l:'Le Bon Coin'},{p:/ASSOCIATION DIO|ND CHRETIENTE|NOTRE DAME|INSTITUT DES CHANOINES/i,c:'ext',l:'Dons'},{p:/APICULTURE|ICKO|NICOT/i,c:'ext',l:'Apiculture'}
+];
+function categ(a,b){const s=(a+' '+b).toUpperCase();
+if(CFG&&CFG.reglesPerso)for(const k of Object.keys(CFG.reglesPerso)){const r=CFG.reglesPerso[k];try{if(new RegExp(r.p,'i').test(s))return{c:r.c,l:r.l}}catch(e){}}
+for(const r of R)if(r.p.test(s))return{c:r.c,l:r.l};return{c:'ext',l:'Non classé'}}
+
+/* ================= PARSEUR CSV ================= */
+function hashTx(t){let s=t.date+'|'+t.lib+'|'+t.amt;let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return 'h'+h.toString(36)}
+function parseCSV(txt){
+const ls=txt.split(/\r?\n/).filter(l=>l.trim());if(ls.length<2)return[];
+const sep=ls[0].includes(';')?';':':';
+const tx=[];const seen={};
+for(let i=1;i<ls.length;i++){
+const c=ls[i].split(sep);if(c.length<10)continue;
+const d=c[0].trim(),lib=(c[1]||'').trim(),full=(c[2]||'')+' '+(c[4]||'');
+const souscat=(c[7]||'').trim();
+const deb=c[8]?parseFloat(String(c[8]).replace(',','.').replace(/[^\d.-]/g,'')):0;
+const cre=c[9]?parseFloat(String(c[9]).replace(/[+\s]/g,'').replace(',','.')):0;
+const amt=(cre>0?cre:deb)||0;if(!amt)continue;
+const p=d.split('/');const iso=p.length===3?`${p[2]}-${p[1]}-${p[0]}`:d;
+const{c:ct,l}=categ(lib,full);
+const t={date:iso,dd:d,lib,full:full.trim().slice(0,120),amt,c:ct,l,sc:souscat};
+let k=hashTx(t);while(seen[k]){k=k+'x'}seen[k]=1;t.k=k;
+tx.push(t)}
+return tx}
+
+/* ================= INTERNES ================= */
+const INT_LIB=/VIREMENT VERS COMPTE CHEQUE|VIR\. VERS COMPTE CHEQUE|VIREMENT VERS LIVRET|^LIVRET A$|MADELEINE MENEY|VIREMENT DE M MENEY PAUL$|VIREMENT DE MME CLAIRE COLLIGNON/i;
+function marquerInternes(D){
+const all=[];
+const accs=new Set([...Object.keys(COMPTES||{}),...Object.keys(D.tx||{})]);
+for(const acc of accs){const bag=D.tx&&D.tx[acc]?D.tx[acc]:{};for(const k of Object.keys(bag)){const t=bag[k];t._acc=acc;t._int=false;all.push(t)}}
+for(const t of all){if((t.sc||'').match(/Virement interne|Transaction exclue/i))t._int=true}
+const cand=all.filter(t=>!t._int&&(INT_LIB.test(t.lib)||INT_LIB.test(t.full)));
+const used=new Set();
+for(const t of cand){if(t._int)continue;
+const mate=cand.find(m=>!used.has(m.k+m._acc)&&m._acc!==t._acc&&Math.abs(m.amt+t.amt)<0.005&&Math.abs(new Date(m.date)-new Date(t.date))<=5*864e5&&(m.k+m._acc)!==(t.k+t._acc));
+if(mate){t._int=true;mate._int=true;used.add(t.k+t._acc);used.add(mate.k+mate._acc)}}
+for(const t of cand){if(!t._int&&/VIREMENT VERS COMPTE CHEQUE|VIR\. VERS COMPTE CHEQUE|VIREMENT VERS LIVRET/i.test(t.lib))t._int=true}
+return all}
+
+/* ================= DATA LAYER ================= */
+const FB_ON=!!FIREBASE_CONFIG.apiKey;
+const SK='budgetMeneyV2';
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null};
+let fbdb=null;
+function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
+function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
+function write(path,val){
+if(FB_ON){fbdb.ref('budget/'+path).set(val)}
+else{const seg=path.split('/');let o=D;for(let i=0;i<seg.length-1;i++){if(!o[seg[i]])o[seg[i]]={};o=o[seg[i]]}o[seg[seg.length-1]]=val;localSave();refresh()}}
+function writeBatch(base,obj){
+if(FB_ON){fbdb.ref('budget/'+base).update(obj)}
+else{const seg=base.split('/');let o=D;for(const s of seg){if(!o[s])o[s]={};o=o[s]}Object.assign(o,obj);localSave();refresh()}}
+
+/* ================= AUTH + BOOT ================= */
+function boot(){
+if(FB_ON){
+firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
+firebase.auth().onAuthStateChanged(u=>{
+if(!u){document.getElementById('ovlLogin').classList.add('show');return}
+document.getElementById('ovlLogin').classList.remove('show');
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null};
+if(!D.config){write('config',CFG_DEFAULTS);return}
+if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
+CFG=D.config;applyCfg();refresh()})})}
+else{document.getElementById('modeBadge').classList.add('show');localLoad();if(!D.config){D.config=JSON.parse(JSON.stringify(CFG_DEFAULTS));localSave()}CFG=D.config;applyCfg();refresh()}}
+function doLogin(){const e=document.getElementById('lgEmail').value.trim(),p=document.getElementById('lgPass').value;
+firebase.auth().signInWithEmailAndPassword(e,p).catch(err=>{const b=document.getElementById('loginErr');b.style.display='block';b.textContent='Connexion refusée : '+(err.code==='auth/invalid-credential'?'email ou mot de passe incorrect.':err.message)})}
+function buildSetup(){
+document.getElementById('setupFields').innerHTML=comptesTries().map(([id,c])=>`<div class="fld"><label>${c.lbl} (…${c.num.slice(-4)})</label><input type="number" step="0.01" id="st_${id}" placeholder="0.00"></div>`).join('')}
+function doSetup(){
+const soldes={};for(const[id]of comptesTries())soldes[id]=parseFloat(document.getElementById('st_'+id).value)||0;
+document.getElementById('ovlSetup').classList.remove('show');
+write('etat',{soldes,dateSoldes:new Date().toISOString().slice(0,10)})}
+
+/* ================= CALCULS ================= */
+function fm(n){return isNaN(n)?'-- €':n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
+function fs(n){return Math.round(n).toLocaleString('fr-FR')+' €'}
+function fdate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}
+function curMonth(){const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`}
+function monthKey(off){const n=new Date();const d=new Date(n.getFullYear(),n.getMonth()+off,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+let ALL=[];
+function computeAll(){ALL=marquerInternes(D)}
+function txReal(){return ALL.filter(t=>!t._int)}
+function txMonth(mk){return txReal().filter(t=>t.date&&t.date.startsWith(mk))}
+function depOf(list){return list.filter(t=>t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0)}
+function revOf(list){return list.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0)}
+function monthsWithData(){const s=new Set();txReal().forEach(t=>{if(t.date)s.add(t.date.slice(0,7))});return[...s].sort()}
+function fullMonthsBack(n){const out=[];for(let i=1;i<=n;i++){const mk=monthKey(-i);if(txMonth(mk).length)out.push(mk)}return out}
+function netMensuelMoyen(){const ms=fullMonthsBack(3);if(!ms.length)return null;let tot=0;for(const mk of ms){const l=txMonth(mk);tot+=revOf(l)-depOf(l)}return tot/ms.length}
+function epargneActuelle(){
+if(!D.etat)return null;
+let tot=0;for(const[id]of comptesTries())tot+=soldeCompte(id)||0;
+return tot}
+
+/* ================= IMPORT ================= */
+let selA='auto';
+function buildAccSel(){
+const el=document.getElementById('accSel');
+el.innerHTML=`<button class="${selA==='auto'?'on':''}" data-a="auto">Auto</button>`+comptesTries().map(([id,c])=>`<button class="${selA===id?'on':''}" data-a="${id}">${c.lbl}</button>`).join('');}
+document.getElementById('accSel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;selA=b.dataset.a;document.querySelectorAll('#accSel button').forEach(x=>x.classList.toggle('on',x===b))});
+document.getElementById('impZ').addEventListener('click',()=>document.getElementById('csvInput').click());
+document.getElementById('csvInput').setAttribute('multiple','');
+document.getElementById('csvInput').addEventListener('change',async e=>{
+const files=[...e.target.files];if(!files.length)return;
+let report=[];
+for(const f of files){
+let acc=selA;
+if(acc==='auto'){acc=null;for(const[k,c]of Object.entries(COMPTES))if(f.name.includes(c.num))acc=k;
+if(!acc){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Compte non reconnu — choisis-le manuellement</div></div>`);continue}}
+const buf=await f.arrayBuffer();
+const tx=parseCSV(new TextDecoder('iso-8859-1').decode(new Uint8Array(buf)));
+if(!tx.length){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Aucune transaction lisible</div></div>`);continue}
+const existing=D.tx[acc]||{};const batch={};let nb=0;
+for(const t of tx){if(!existing[t.k]){batch[t.k]=t;nb++}}
+if(nb)writeBatch('tx/'+acc,batch);
+write('meta/lastImp/'+acc,new Date().toISOString());
+matchEngagements(tx);
+report.push(`<div class="row"><div class="row-l">${COMPTES[acc].lbl}</div><div class="row-v g">${nb} nouvelle(s) / ${tx.length} lues</div></div>`)}
+document.getElementById('impRes').style.display='block';
+document.getElementById('impSum').innerHTML=report.join('');
+e.target.value='';if(!FB_ON)refresh()});
+
+/* ================= ENGAGEMENTS ================= */
+function matchEngagements(newTx){
+for(const[id,eng]of Object.entries(D.engagements||{})){
+if(eng.status!=='pending')continue;
+const cands=newTx.filter(t=>t.amt<0&&eng.matchCats.some(mc=>t.l.toLowerCase().includes(mc.toLowerCase())));
+if(!cands.length)continue;
+let best=cands[0],bd=Math.abs(Math.abs(best.amt)-eng.cost);
+cands.forEach(c=>{const d=Math.abs(Math.abs(c.amt)-eng.cost);if(d<bd){best=c;bd=d}});
+const real=Math.abs(best.amt);
+write('engagements/'+id,Object.assign({},eng,{status:real<=eng.cost*1.15?'ok':'over',real}))}}
+function doEngage(){
+const checked=[...document.querySelectorAll('.rw-item.checked')];
+checked.forEach(el=>{const rw=REWARDS[+el.dataset.i];
+const id='e'+Date.now()+Math.random().toString(36).slice(2,6);
+write('engagements/'+id,{name:rw.name,cost:rw.cost,matchCats:rw.cats,status:'pending',month:curMonth()})});
+document.querySelectorAll('.rw-item.checked').forEach(el=>el.classList.remove('checked'));
+if(!FB_ON)refresh()}
+function updateEng(){
+const el=document.getElementById('engList');const es=Object.entries(D.engagements||{}).filter(([,e])=>e.month===curMonth());
+if(!es.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun engagement ce mois-ci.</div>';return}
+el.innerHTML=es.map(([,e])=>{
+const st=e.status==='pending'?'<span class="eng-status eng-pending">En attente</span>':e.status==='ok'?`<span class="eng-status eng-ok">Tenu · ${fs(e.real)}</span>`:`<span class="eng-status eng-over">Dépassé · ${fs(e.real)}</span>`;
+return`<div class="eng-item"><div>${e.name} — ${fs(e.cost)}</div>${st}</div>`}).join('')}
+function updateRW(){
+const spent=txMonth(curMonth()).filter(t=>t.c==='ext'&&t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0);
+const pend=Object.values(D.engagements||{}).filter(e=>e.status==='pending'&&e.month===curMonth()).reduce((s,e)=>s+e.cost,0);
+const checkedCost=[...document.querySelectorAll('.rw-item.checked')].reduce((s,el)=>s+REWARDS[+el.dataset.i].cost,0);
+const rest=ENV.ext-spent-pend;
+const el=document.getElementById('rwRest');el.textContent=fs(rest-checkedCost);
+el.style.color=rest-checkedCost<0?'var(--red)':rest-checkedCost<60?'var(--orange)':'var(--green)';
+const list=document.getElementById('rwList');
+if(!list.dataset.built){list.innerHTML=REWARDS.map((r,i)=>`<div class="rw-item" data-i="${i}" onclick="togRW(this)"><div class="rw-ck">✓</div><div class="rw-emoji">${r.emoji}</div><div class="rw-info"><div class="rw-name">${r.name}</div></div><div class="rw-price">${r.cost} €</div></div>`).join('');list.dataset.built='1'}
+[...list.children].forEach((el2,i)=>{const c=el2.classList.contains('checked');el2.classList.toggle('available',!c&&REWARDS[i].cost<=rest-checkedCost);el2.classList.toggle('locked',!c&&REWARDS[i].cost>rest-checkedCost)});
+document.getElementById('btnEngage').disabled=!document.querySelector('.rw-item.checked')}
+function togRW(el){el.classList.toggle('checked');updateRW()}
+
+/* ================= OPTIMISATIONS AUTO-DÉTECTÉES ================= */
+let OPTIM=[];
+function detecterOptimisations(){
+OPTIM=[];
+const cutoff=new Date(Date.now()-120*864e5).toISOString().slice(0,10);
+const deb=txReal().filter(t=>t.amt<0&&t.date>=cutoff&&OPTIM_LABELS.includes(t.l));
+const grp={};
+for(const t of deb){if(!grp[t.l])grp[t.l]=[];grp[t.l].push(t)}
+for(const[lib,txs]of Object.entries(grp)){
+const mois=new Set(txs.map(t=>t.date.slice(0,7)));
+if(mois.size<2)continue;
+const tot=txs.reduce((s,t)=>s+Math.abs(t.amt),0);
+const mens=tot/mois.size;
+if(mens<3)continue;
+const occParMois=txs.length/mois.size;
+const id='o'+lib.toLowerCase().replace(/[^a-z]/g,'');
+let t2,gain;
+if(occParMois>=1.7){gain=Math.round(mens/2*100)/100;
+t2=`${lib} : ${txs.length} prélèvements sur ${mois.size} mois (${fs(mens)}/mois) — un DOUBLON est probable. Résilier l'un des deux rapporte ${fm(gain)}/mois.`}
+else{gain=Math.round(mens*100)/100;
+t2=`${lib} : ${fm(mens)}/mois détecté dans tes relevés. Résilier si non indispensable rapporte ${fm(gain)}/mois.`}
+OPTIM.push({id,lib,t:t2,w:'Cocher = engagement que ce prélèvement est stoppé. L\u2019appli vérifie aux prochains imports.',gain,mens})}
+OPTIM.sort((a,b)=>b.gain-a.gain)}
+function etatOptim(id){return(D.actionsEtat||{})[id]||null}
+function optimRelapse(o,etat){
+if(!etat||!etat.d)return false;
+const limite=new Date(new Date(etat.ts).getTime()+5*864e5).toISOString().slice(0,10);
+return txReal().some(t=>t.amt<0&&t.l===o.lib&&t.date>limite)}
+function gainsEngages(){
+let g=0;for(const o of OPTIM){const e=etatOptim(o.id);if(e&&e.d&&!optimRelapse(o,e))g+=o.gain}return g}
+function togOptim(id){
+const e=etatOptim(id);
+write('actionsEtat/'+id,e&&e.d?null:{d:true,ts:new Date().toISOString()})}
+
+/* ================= DASHBOARD ================= */
+function updateProjection(){
+const box=document.getElementById('projBox');
+const mk=curMonth();const mtx=txMonth(mk);
+const now=new Date();const dayN=now.getDate();
+const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+const spent=depOf(mtx);
+document.getElementById('projSpent').textContent=fs(spent);
+document.getElementById('projCible').textContent=fs(CIBLE);
+if(!ALL.length||!mtx.length&&!fullMonthsBack(1).length){document.getElementById('projVal').textContent='--';document.getElementById('projMsg').textContent='Importe les CSV pour lancer la surveillance.';box.className='proj ok';return}
+const hist=fullMonthsBack(3);let dailyVar=null;
+if(hist.length){let v=0,days=0;for(const h of hist){const l=txMonth(h);v+=depOf(l.filter(t=>t.c!=='fix'));days+=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate()}dailyVar=v/days}
+const fixSpent=depOf(mtx.filter(t=>t.c==='fix'));
+const fixRest=Math.max(0,FIXES_REF-fixSpent);
+let proj;
+const gEng=gainsEngages();
+if(dailyVar!==null){const varSpent=spent-fixSpent;const dv=Math.max(0,dailyVar-gEng/30);proj=varSpent+dv*(lastDay-dayN)+fixSpent+fixRest}
+else{proj=spent/Math.max(1,dayN)*lastDay}
+document.getElementById('projVal').textContent=fs(proj);
+const ratio=proj/CIBLE;const pct=Math.min(100,spent/CIBLE*100);
+const fill=document.getElementById('projFill');fill.style.width=pct+'%';
+const msg=document.getElementById('projMsg');
+const overJour=(proj-CIBLE)/lastDay;
+if(ratio<=1){box.className='proj ok';fill.style.background='#16a34a';
+const gain=REVENUS_REF-proj;
+msg.textContent=`Trajectoire tenue. Si tu finis le mois ainsi : ${fs(Math.max(0,gain))} d'épargne. Continue.`}
+else if(ratio<=1.1){box.className='proj warn';fill.style.background='#d97706';
+msg.textContent=`Dérive en cours : +${fs(proj-CIBLE)} au-dessus de la cible. Freine maintenant, pas le ${lastDay}.`}
+else if(ratio<=1.25){box.className='proj bad';fill.style.background='#dc2626';
+msg.textContent=`Trajectoire rouge : +${Math.round((ratio-1)*100)} % au-dessus de la cible. Chaque journée à ce rythme reprend ${fs(overJour)} sur l'épargne.`}
+else{box.className='proj crit';fill.style.background='#fff';
+msg.textContent=`STOP. À ce rythme, ce mois efface ${fs(proj-CIBLE)} d'épargne. C'est exactement le mécanisme qui a consumé le don et l'assurance. Plus un achat non vital ce mois-ci.`}}
+function updateTraj(){
+const box=document.getElementById('trajBox');
+const main=document.getElementById('trajMain');
+const zero=document.getElementById('trajZero');
+const jal=document.getElementById('trajJalons');
+const note=document.getElementById('trajNote');
+zero.innerHTML='';jal.innerHTML='';note.textContent='';
+const ep=epargneActuelle();let net=netMensuelMoyen();
+if(ep===null||net===null){box.className='traj';main.textContent='Saisis les soldes de départ et importe au moins un mois de CSV.';return}
+const gTraj=gainsEngages();net+=gTraj;
+if(net>=50){box.className='traj up';document.getElementById('trajLbl').textContent='Trajectoire d\u2019épargne — ça monte';
+main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · rythme réel : <span class="mono">+${fs(net)}/mois</span>`;
+const targets=[];let t=Math.ceil(ep/10000)*10000;for(let i=0;i<3;i++){targets.push(t);t+=10000}
+jal.innerHTML=targets.map(tg=>{const months=(tg-ep)/net;const d=new Date();d.setMonth(d.getMonth()+Math.ceil(months));
+return`<div class="jalon"><span>${fs(tg)}</span><span class="jd">${d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span></div>`}).join('');
+note.textContent=net>=EPARGNE_CIBLE?`Objectif de ${fs(EPARGNE_CIBLE)}/mois tenu. Les 25 000 € des travaux seront reconstitués largement avant l'échéance.`:`Bien, mais sous l'objectif de ${fs(EPARGNE_CIBLE)}/mois. Au rythme cible, chaque palier arriverait ${Math.round((1-net/EPARGNE_CIBLE)*100)} % plus vite.`}
+else if(net<=-50){box.className='traj down';document.getElementById('trajLbl').textContent='Alerte — l\u2019épargne fond';
+main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`;
+const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.floor(months));
+zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
+note.textContent=`C'est la date où il ne reste plus rien — ni pour les travaux, ni pour un imprévu. Elle recule à chaque mois tenu sous ${fs(CIBLE)}.`}
+else{box.className='traj';main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · stagnation (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès : les paliers ne seront jamais atteints à ce rythme.`}}
+function updateEnv(){
+const mtx=txMonth(curMonth());
+const defs=[['courses','Courses',ENV.courses],['carburant','Carburant',ENV.carburant],['sante','Santé',ENV.sante],['trav','Travaux',ENV.trav],['abo','Abonnements',ENV.abo],['ext','Extras',ENV.ext]];
+document.getElementById('envList').innerHTML=defs.map(([c,lbl,bud])=>{
+const sp=depOf(mtx.filter(t=>t.c===c));const r=sp/bud;
+const col=r<=0.8?'#16a34a':r<=1?'#d97706':'#dc2626';
+return`<div class="env"><div class="env-n">${lbl}</div><div class="env-track"><div class="env-fill" style="width:${Math.min(100,r*100)}%;background:${col}"></div></div><div class="env-v">${fs(sp)} / ${fs(bud)}</div></div>`}).join('')}
+function updateListes(){
+const mtx=txMonth(curMonth());
+const revs={};mtx.filter(t=>t.amt>0).forEach(t=>{revs[t.l]=(revs[t.l]||0)+t.amt});
+document.getElementById('revList').innerHTML=Object.entries(revs).sort((a,b)=>b[1]-a[1]).map(([l,v])=>`<div class="row"><div class="row-l">${l}</div><div class="row-v g">+${fm(v)}</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun revenu importé ce mois-ci.</div>';
+const deps={};mtx.filter(t=>t.amt<0).forEach(t=>{const g={fix:'Charges fixes',courses:'Courses',carburant:'Carburant',sante:'Santé',trav:'Travaux',abo:'Abonnements',vac:'Vacances',ess:'Véhicule / essentiel',ext:'Extras'}[t.c]||'Autres';deps[g]=(deps[g]||0)+Math.abs(t.amt)});
+const tot=Object.values(deps).reduce((s,v)=>s+v,0);
+document.getElementById('depList').innerHTML=Object.entries(deps).sort((a,b)=>b[1]-a[1]).map(([l,v])=>`<div class="row"><div class="row-l">${l}</div><div class="row-v rd">−${fm(v)}</div></div>`).join('')+`<div class="row" style="border-top:2px solid var(--border)"><div class="row-l" style="font-weight:800;color:var(--text)">Total</div><div class="row-v ${tot>CIBLE?'rd':'n'}">−${fm(tot)}</div></div>`}
+function soldeCompte(acc){
+if(!D.etat)return null;
+const d0=(D.etat.datesSoldes&&D.etat.datesSoldes[acc])||D.etat.dateSoldes;
+const bag=D.tx[acc]||{};let v=(D.etat.soldes&&D.etat.soldes[acc])||0;
+for(const k of Object.keys(bag)){const t=bag[k];if(t.date>d0)v+=t.amt}return v}
+function updateComptes(){
+const el=document.getElementById('cptList');
+if(!D.etat){el.innerHTML='';document.getElementById('patN').textContent='--';return}
+let tot=0;
+el.innerHTML=comptesTries().map(([id,c])=>{const v=soldeCompte(id);tot+=v;
+return`<div class="row"><div class="row-l">${c.lbl}</div><div class="row-v ${v<0?'rd':'g'}">${fm(v)}</div></div>`}).join('');
+document.getElementById('patN').textContent=fm(tot)}
+function updateActions(){
+detecterOptimisations();
+const acts=D.actions||{};const keys=Object.keys(acts);
+const todoStat=keys.filter(k=>!acts[k].d).length;
+const todoOpt=OPTIM.filter(o=>{const e=etatOptim(o.id);return!(e&&e.d)||optimRelapse(o,e)}).length;
+const g=gainsEngages();
+document.getElementById('actN').textContent=todoStat+todoOpt;
+document.getElementById('actP').style.display=(todoStat+todoOpt+OPTIM.length)?'block':'none';
+document.getElementById('actGains').innerHTML=g>0?`Économies engagées : <b>+${fm(g)}/mois</b> — déjà intégrées à ta projection et à ta trajectoire d'épargne.`:'';
+const htmlOpt=OPTIM.map(o=>{const e=etatOptim(o.id);const done=e&&e.d;const rel=done&&optimRelapse(o,e);
+return`<div class="act-i"><div class="act-ck ${done&&!rel?'done':''}" onclick="togOptim('${o.id}')">${done&&!rel?'✓':''}</div><div><div class="act-txt">${o.t}${rel?' <span style="color:#dc2626;font-weight:800">⚠ TOUJOURS PRÉLEVÉ après ton engagement — gain annulé. Décoche, résilie vraiment, recoche.</span>':''}${done&&!rel?` <span style="color:#16a34a;font-weight:800">+${fm(o.gain)}/mois</span>`:''}</div><div class="act-w">${o.w}</div></div></div>`}).join('');
+const htmlStat=keys.map(k=>{const a=acts[k];
+return`<div class="act-i"><div class="act-ck ${a.d?'done':''}" onclick="togA('${k}')">${a.d?'✓':''}</div><div><div class="act-txt">${a.t}</div><div class="act-w">${a.w}</div></div></div>`}).join('');
+document.getElementById('actL').innerHTML=htmlOpt+htmlStat}
+function togA(k){const a=D.actions[k];write('actions/'+k,Object.assign({},a,{d:!a.d}))}
+function updateAlertImport(){
+const el=document.getElementById('alertB');
+const stamps=Object.values(D.meta&&D.meta.lastImp||{});
+const last=stamps.length?Math.max(...stamps.map(s=>+new Date(s))):null;
+if(!last){el.className='alert danger';el.textContent='Aucun import. L\u2019appli est aveugle — et toi aussi.';
+document.getElementById('lastImp').textContent='aucun';return}
+const days=(Date.now()-last)/864e5;
+document.getElementById('lastImp').textContent=new Date(last).toLocaleDateString('fr-FR')+' ('+Math.floor(days)+' j)';
+if(days>14){el.className='alert over';el.textContent=`${Math.floor(days)} jours sans import. C\u2019est exactement comme ça que 54 000 € ont disparu sans que personne ne le voie. Importe. Maintenant.`}
+else if(days>7){el.className='alert danger';el.textContent=`${Math.floor(days)} jours sans import. La surveillance ne vaut que si elle est nourrie chaque semaine.`}
+else el.className='alert'}
+function updateScore(){
+const mtx=txMonth(curMonth());const spent=depOf(mtx);
+const now=new Date();const dayN=now.getDate();const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+let sc=20,c1='✓',c2='✓',c3='✓',c4='✓';
+const projTxt=document.getElementById('projVal').textContent;
+const proj=parseFloat(projTxt.replace(/[^\d,-]/g,'').replace(',','.'))||spent;
+if(proj>CIBLE){const o=(proj-CIBLE)/CIBLE*100;const m=Math.min(8,Math.round(o/8));sc-=m;c1=`−${m}`}
+const stamps=Object.values(D.meta&&D.meta.lastImp||{});
+if(stamps.length){const ds=(Date.now()-Math.max(...stamps.map(s=>+new Date(s))))/864e5;if(ds>10){sc-=4;c2='−4'}else if(ds>7){sc-=2;c2='−2'}}else{sc-=4;c2='−4'}
+const prev=txMonth(monthKey(-1));
+if(prev.length){const net=revOf(prev)-depOf(prev);if(net<0){sc-=5;c3=`−5 (${fs(net)})`}else if(net<EPARGNE_CIBLE){sc-=2;c3=`−2 (${fs(net)})`}else c3=`✓ +${fs(net)}`}else c3='--';
+if(D.etat){const dec=comptesTries().some(([id,c])=>c.type!=='epargne'&&soldeCompte(id)<0);
+if(dec){sc-=3;c4='−3 (découvert)'}}
+sc=Math.max(0,sc);
+const circ=2*Math.PI*54;const off=circ-(sc/20)*circ;
+let stk='#16a34a';if(sc<8)stk='#dc2626';else if(sc<14)stk='#d97706';
+document.getElementById('scFl').style.strokeDashoffset=off;document.getElementById('scFl').style.stroke=stk;
+document.getElementById('scV').textContent=sc+'/20';document.getElementById('scV').style.color=stk;
+const cm=[[18,'Exemplaire 🏆'],[14,'Bien, continue 👍'],[10,'Peut mieux faire 😐'],[6,'Ça dérape 😬'],[0,'Hémorragie 🔥']];
+document.getElementById('scLbl').textContent=cm.find(c=>sc>=c[0])[1];
+document.getElementById('sc1').textContent=c1;document.getElementById('sc2').textContent=c2;document.getElementById('sc3').textContent=c3;document.getElementById('sc4').textContent=c4}
+
+/* ================= CHARTS ================= */
+let ch1=null,ch2=null;
+function drawCharts(){
+const ms=monthsWithData();if(!ms.length)return;
+const dep=ms.map(m=>depOf(txMonth(m)));
+const cfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'JetBrains Mono',size:10}}},x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10}}}}};
+if(ch1)ch1.destroy();
+ch1=new Chart(document.getElementById('chartTotal'),{type:'bar',data:{labels:ms,datasets:[
+{data:dep,backgroundColor:dep.map(v=>v>CIBLE?'#dc2626':'#16a34a'),borderRadius:8},
+{data:ms.map(()=>CIBLE),type:'line',borderColor:'#4f46e5',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false}]},options:cfg});
+const ep0=epargneActuelle();const net=netMensuelMoyen();
+if(ep0===null)return;
+const labels=[...ms];const epc=[];
+let running=ep0;const rev=[...ms].reverse();
+const vals={};for(const m of ms){const l=txMonth(m);vals[m]=revOf(l)-depOf(l)}
+let cur=ep0;const back=[];for(const m of rev){back.push(cur);cur-=vals[m]}back.reverse();
+const projLabels=[],projVals=[];
+if(net!==null){let v=ep0;for(let i=1;i<=12;i++){const d=new Date();d.setMonth(d.getMonth()+i);projLabels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);v+=net;projVals.push(Math.max(0,v))}}
+if(ch2)ch2.destroy();
+ch2=new Chart(document.getElementById('chartEpargne'),{type:'line',data:{labels:[...labels,...projLabels],datasets:[
+{data:[...back,...projLabels.map(()=>null)],borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.08)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#4f46e5'},
+{data:[...labels.map((_,i)=>i===labels.length-1?back[back.length-1]:null),...projVals],borderColor:net>=0?'#16a34a':'#dc2626',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2}]},options:cfg})}
+
+/* ================= VERROU INTELLIGENT DES CIBLES ================= */
+const DELAI_H=72;
+const CHAMPS={'cible':{lbl:'Dépenses totales max',path:'cible',sens:'dep'},'epargneCible':{lbl:'Épargne mensuelle',path:'epargneCible',sens:'ep'},'env.courses':{lbl:'Courses',path:'env/courses',sens:'dep'},'env.carburant':{lbl:'Carburant',path:'env/carburant',sens:'dep'},'env.sante':{lbl:'Santé',path:'env/sante',sens:'dep'},'env.trav':{lbl:'Travaux',path:'env/trav',sens:'dep'},'env.abo':{lbl:'Abonnements',path:'env/abo',sens:'dep'},'env.ext':{lbl:'Extras',path:'env/ext',sens:'dep'},'revenusRef':{lbl:'Revenus de référence',path:'revenusRef',sens:'neutre'},'fixesRef':{lbl:'Charges fixes estimées',path:'fixesRef',sens:'neutre'}};
+function valChamp(key){const p=key.split('.');let v=CFG;for(const s of p)v=v[s];return v}
+function userEmail(){return FB_ON&&firebase.auth().currentUser?firebase.auth().currentUser.email:'local'}
+function estDurcissement(key,nv){const c=CHAMPS[key];const ov=valChamp(key);
+if(c.sens==='neutre')return true;
+if(c.sens==='dep')return nv<ov;
+return nv>ov}
+function demanderCible(){
+const key=document.getElementById('modChamp').value;
+const nv=parseFloat(document.getElementById('modVal').value);
+if(!key||isNaN(nv)||nv<0){alert('Valeur invalide.');return}
+const ov=valChamp(key);
+if(nv===ov){alert('C\u2019est déjà la valeur en vigueur.');return}
+if(estDurcissement(key,nv)){
+write('config/'+CHAMPS[key].path,nv);
+write('config/journal/j'+Date.now(),{key,ov,nv,par:userEmail(),ts:Date.now(),type:'durcissement immédiat'})}
+else{
+const id='p'+Date.now();
+write('config/pending/'+id,{key,ov,nv,par:userEmail(),ts:Date.now()})}
+document.getElementById('modVal').value=''}
+function annulerPending(id){write('config/pending/'+id,null)}
+function approuverPending(id){
+const p=(CFG.pending||{})[id];if(!p)return;
+if(userEmail()===p.par){alert('On n\u2019approuve pas sa propre demande. Claire doit le faire depuis son téléphone — ou attends la fin du délai.');return}
+appliquerPending(id,p,'approuvé par '+userEmail())}
+function confirmerPending(id){
+const p=(CFG.pending||{})[id];if(!p)return;
+if(Date.now()-p.ts<DELAI_H*3600e3){alert('Le délai de réflexion court encore.');return}
+appliquerPending(id,p,'confirmé après délai')}
+function appliquerPending(id,p,mode){
+write('config/'+CHAMPS[p.key].path,p.nv);
+write('config/journal/j'+Date.now(),{key:p.key,ov:p.ov,nv:p.nv,par:p.par,ts:Date.now(),type:mode});
+write('config/pending/'+id,null)}
+function updateCibles(){
+document.getElementById('ciblesList').innerHTML=Object.entries(CHAMPS).map(([k,c])=>`<div class="cbl"><span>${c.lbl}</span><span class="cv">${fs(valChamp(k))}</span></div>`).join('');
+const sel=document.getElementById('modChamp');
+if(!sel.options.length)sel.innerHTML=Object.entries(CHAMPS).map(([k,c])=>`<option value="${k}">${c.lbl}</option>`).join('');
+const pend=CFG.pending||{};const keys=Object.keys(pend);
+const el=document.getElementById('pendList');
+if(!keys.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune demande. Les cibles tiennent.</div>';return}
+el.innerHTML=keys.map(id=>{const p=pend[id];const c=CHAMPS[p.key];
+const restant=DELAI_H*3600e3-(Date.now()-p.ts);
+const ready=restant<=0;
+const rh=Math.ceil(restant/3600e3);
+const moi=userEmail()===p.par;
+let btns=`<button class="pbtn-cancel" onclick="annulerPending('${id}')">Annuler</button>`;
+if(ready)btns+=`<button class="pbtn-ok" onclick="confirmerPending('${id}')">Confirmer et appliquer</button>`;
+else if(FB_ON&&!moi)btns+=`<button class="pbtn-ok" onclick="approuverPending('${id}')">Approuver maintenant</button>`;
+return`<div class="pend ${ready?'ready':''}">${c.lbl} : ${fs(p.ov)} → ${fs(p.nv)} (adoucissement demandé par ${p.par===userEmail()?'toi':p.par})<br>${ready?'Délai écoulé — confirme si tu le veux toujours.':`Applicable dans ${rh} h${FB_ON&&!moi?' — ou approuve maintenant':moi&&FB_ON?' — ou Claire peut approuver depuis son téléphone':''}.`}<div class="pbtns">${btns}</div></div>`}).join('')}
+
+function updateJournal(){
+const el=document.getElementById('journalList');
+const j=CFG.journal||{};
+const entries=Object.values(j).sort((a,b)=>b.ts-a.ts).slice(0,20);
+if(!entries.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune modification depuis le lancement. Les cibles d\u2019origine tiennent.</div>';return}
+el.innerHTML=entries.map(e=>{const c=CHAMPS[e.key];const lbl=c?c.lbl:e.key;
+const durci=e.type&&e.type.startsWith('durciss');
+const qui=e.par==='local'?'':((e.par===userEmail()?'toi':e.par)+' · ');
+return`<div class="row"><div class="row-l">${lbl}<br><span style="font-weight:500;color:var(--text-muted);font-size:11px">${qui}${new Date(e.ts).toLocaleDateString('fr-FR')} · ${e.type}</span></div><div class="row-v ${durci?'g':'o'}">${fs(e.ov)} → ${fs(e.nv)}</div></div>`}).join('')}
+
+/* ================= ADMIN COMPTES ================= */
+function updateCptAdmin(){
+const el=document.getElementById('cptAdmin');
+el.innerHTML=comptesTries().map(([id,c])=>`<div class="row"><div class="row-l">${c.lbl}<span style="font-weight:500;color:var(--text-muted)"> …${(c.num||'').slice(-4)} · ${c.type==='epargne'?'épargne':'courant'}</span></div><div class="row-v" style="cursor:pointer;color:var(--accent)" onclick="renCompte('${id}')">✎</div></div>`).join('')}
+function togAddCpt(){const f=document.getElementById('addCptForm');f.style.display=f.style.display==='none'?'block':'none'}
+function renCompte(id){
+const c=COMPTES[id];const nv=prompt('Nouveau libellé pour « '+c.lbl+' » :',c.lbl);
+if(nv&&nv.trim())write('config/comptes/'+id+'/lbl',nv.trim())}
+function addCompte(){
+const lbl=document.getElementById('acLbl').value.trim();
+const num=document.getElementById('acNum').value.trim();
+const type=document.getElementById('acType').value;
+const solde=parseFloat(document.getElementById('acSolde').value)||0;
+if(!lbl||!num){alert('Libellé et numéro obligatoires.');return}
+const id='c'+num.slice(-6);
+if(COMPTES[id]){alert('Un compte avec ce numéro existe déjà.');return}
+const ordre=Math.max(0,...Object.values(COMPTES).map(c=>c.ordre||0))+1;
+writeBatch('config/comptes/'+id,{lbl,num,type,ordre});
+write('etat/soldes/'+id,solde);
+write('etat/datesSoldes/'+id,new Date().toISOString().slice(0,10));
+document.getElementById('addCptForm').style.display='none';
+['acLbl','acNum','acSolde'].forEach(i=>document.getElementById(i).value='')}
+
+/* ================= AIDE ⓘ ================= */
+const INFOS={
+proj:"<b>Projection fin de mois.</b> Calcul : dépenses variables déjà faites ce mois-ci + (rythme quotidien moyen de tes dépenses variables sur les 3 derniers mois pleins × jours restants) + charges fixes déjà passées + charges fixes restantes estimées. Les virements internes sont exclus. Couleurs : vert = trajectoire ≤ cible · orange = dépassement ≤ 10 % · rouge = ≤ 25 % · rouge clignotant au-delà. La projection est fiable dès le 5 du mois environ ; avant, elle est indicative.",
+traj:"<b>Trajectoire d'épargne.</b> Épargne du foyer = somme des soldes reconstitués de tous les comptes (soldes de départ + toutes les opérations importées depuis, internes exclus). Rythme = moyenne de (revenus − dépenses) des 3 derniers mois pleins. S'il est positif : dates d'atteinte des paliers de 10 000 €, calculées sur TON rythme réel, pas la théorie. S'il est négatif : date exacte à laquelle l'épargne atteint zéro. Ces dates bougent à chaque import.",
+env:"<b>Enveloppes du mois.</b> Chaque dépense est classée automatiquement par son libellé bancaire (voir Règles). La barre se remplit sur le mois en cours : vert ≤ 80 % du plafond · orange ≤ 100 % · rouge au-delà. Les plafonds se modifient uniquement via le verrou intelligent de l'onglet Règles.",
+rev:"<b>Revenus du mois.</b> Toutes les entrées du mois en cours, détaillées ligne par ligne, virements internes exclus (un virement entre vos comptes n'est pas un revenu).",
+dep:"<b>Dépenses du mois.</b> Sorties du mois en cours regroupées par famille, virements internes exclus. Le total passe en rouge s'il dépasse la cible mensuelle.",
+cpt:"<b>Comptes.</b> Solde affiché = solde de départ saisi au premier lancement + toutes les opérations importées postérieures à cette date. Si un solde diverge de la réalité bancaire, c'est qu'il manque des opérations : réimporte un CSV couvrant la période manquante.",
+lastimp:"<b>Dernier import.</b> L'appli ne voit que ce que tu lui donnes. Sans import hebdomadaire, la projection et la trajectoire deviennent aveugles. Rappel à 7 jours, alarme à 14.",
+impzone:"<b>Import CSV.</b> Export depuis l'espace Caisse d'Épargne (Opérations → Télécharger CSV). Tu peux sélectionner plusieurs fichiers d'un coup. En mode Auto, le compte est reconnu par son numéro dans le nom du fichier. Les opérations déjà connues sont ignorées automatiquement : réimporter deux fois le même fichier ne crée aucun doublon, et les périodes peuvent se chevaucher sans risque.",
+impsel:"<b>Choix du compte.</b> Auto = détection par le numéro dans le nom du fichier (recommandé). Choisis un compte précis uniquement si le fichier a été renommé.",
+cptadm:"<b>Comptes suivis.</b> La liste vit dans Firebase : ajoute un compte (libellé, numéro pour la détection auto, type, solde du jour) et toute l'appli s'adapte — import, dashboard, épargne, score. Renommage par ✎. Pas de suppression : un compte fermé cesse simplement de recevoir des imports. Le solde saisi à l'ajout est daté du jour même : seules les opérations postérieures s'y ajoutent.",
+envies:"<b>Récompenses.</b> Simulateur : coche des envies, le budget extras restant se recalcule (extras du mois déjà dépensés + engagements en attente déduits). Valider crée un engagement : au prochain import, l'appli cherche la dépense correspondante par catégorie et montant, et affiche Tenu ou Dépassé (tolérance 15 %). C'est le circuit officiel du plaisir : prévu, chiffré, assumé.",
+chtot:"<b>Dépenses totales par mois.</b> Barres = total mensuel des dépenses réelles (internes exclues). Vert = sous la cible, rouge = au-dessus. Ligne pointillée = la cible.",
+chep:"<b>Épargne : réel et projection.</b> Ligne pleine = épargne reconstituée mois par mois. Ligne pointillée = projection sur 12 mois au rythme moyen des 3 derniers mois — verte si ça monte, rouge si ça fond.",
+score:"<b>Score /20.</b> Barème exact : trajectoire du mois au-dessus de la cible → −1 point par tranche de 8 % de dépassement, max −8. Import : > 7 jours → −2, > 10 jours → −4. Épargne du mois précédent : négative → −5, positive mais sous l'objectif → −2. Découvert sur un compte courant → −3. Le score se recalcule à chaque import.",
+cibles:"<b>Cibles en vigueur.</b> Les valeurs actuellement appliquées par toute l'appli (projection, enveloppes, score). Elles vivent dans Firebase, jamais dans le code : toute modification passe par le verrou ci-dessous et se journalise.",
+pending:"<b>Demandes en cours.</b> Chaque adoucissement demandé apparaît ici, chez vous deux, avec son auteur et son compte à rebours de 72 h. Trois issues : annuler (immédiat, toujours possible) · l'autre approuve depuis son téléphone (application immédiate) · le délai s'écoule ET tu confirmes (double intention : si tu ne reviens pas confirmer, rien ne change).",
+verrou:"<b>Verrou intelligent.</b> Principe Bulldog Blocker appliqué au budget. DURCIR (baisser un plafond de dépenses, monter l'objectif d'épargne) = immédiat, la vertu ne fait pas la queue. ADOUCIR = 72 h de réflexion + confirmation, ou approbation de l'autre — jamais la sienne propre. Revenus de référence et charges fixes estimées sont neutres (immédiat, ce sont des faits, pas de la discipline). Tout est journalisé dans Firebase avec auteur et date.",
+setup:"<b>Soldes de départ.</b> Le point zéro de tout : chaque solde affiché ensuite = ce chiffre + les opérations importées. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME de la saisie, sinon toutes les projections seront décalées d'autant.",
+actions:"<b>Optimisations.</b> Deux familles. (1) DÉTECTÉES : l'appli scanne tes 4 derniers mois d'imports, repère les prélèvements récurrents optimisables (abonnements, frais bancaires, locations) et les formule avec les montants réels de TES relevés — y compris les doublons probables (deux prélèvements du même service chaque mois). (2) MANUELLES : les chantiers non lisibles dans les CSV. Cocher une action détectée est un ENGAGEMENT : le gain (€/mois) s'ajoute immédiatement à ta projection et à ta trajectoire d'épargne. Mais l'appli vérifie : si le prélèvement réapparaît dans un import plus de 5 jours après ton engagement, l'action passe en TOUJOURS PRÉLEVÉ, le gain est annulé et affiché en rouge. Cocher n'est pas résilier — l'appli sait faire la différence.",
+journal:"<b>Journal des modifications.</b> Trace intégrale et non effaçable de tout changement de cible : quoi, ancienne et nouvelle valeur, qui, quand, et par quel chemin (durcissement immédiat · approuvé par l'autre · confirmé après délai). Vit dans Firebase (config/journal). Les 20 dernières entrées sont affichées, tout l'historique est conservé en base. S'il n'y a rien ici, c'est que les cibles n'ont jamais bougé — c'est très bien.",
+login:"<b>Connexion.</b> Comptes créés par Paul dans la console Firebase (Authentication → Users). Seuls vos deux emails ont accès à la base — c'est aussi cette identité qui permet l'approbation croisée du verrou."
+};
+function tipHtml(k){return `<span class="tip-i" data-i="${k}">i</span>`}
+let tipOpen=null;
+document.addEventListener('click',e=>{
+const t=e.target.closest('.tip-i');
+const b=document.getElementById('tipBubble');
+if(t){e.stopPropagation();
+if(tipOpen===t){b.classList.remove('show');tipOpen=null;return}
+b.innerHTML=INFOS[t.dataset.i]||'';
+b.classList.add('show');tipOpen=t;
+const r=t.getBoundingClientRect();
+b.style.left='0px';b.style.top='0px';
+const bw=Math.min(300,window.innerWidth-24);b.style.maxWidth=bw+'px';
+const bh=b.offsetHeight,bwr=b.offsetWidth;
+let x=Math.min(Math.max(12,r.left-8),window.innerWidth-bwr-12);
+let y=r.bottom+8;if(y+bh>window.innerHeight-12)y=r.top-bh-8;
+b.style.left=x+'px';b.style.top=Math.max(8,y)+'px';return}
+if(tipOpen){b.classList.remove('show');tipOpen=null}},true);
+document.addEventListener('mouseover',e=>{
+const t=e.target.closest('.tip-i');if(!t||tipOpen)return;
+const b=document.getElementById('tipBubble');
+b.innerHTML=INFOS[t.dataset.i]||'';b.classList.add('show');
+const r=t.getBoundingClientRect();
+const bw=Math.min(300,window.innerWidth-24);b.style.maxWidth=bw+'px';
+let x=Math.min(Math.max(12,r.left-8),window.innerWidth-b.offsetWidth-12);
+let y=r.bottom+8;if(y+b.offsetHeight>window.innerHeight-12)y=r.top-b.offsetHeight-8;
+b.style.left=x+'px';b.style.top=Math.max(8,y)+'px';
+t.addEventListener('mouseleave',()=>{if(!tipOpen)b.classList.remove('show')},{once:true})});
+
+/* ================= NAV + REFRESH ================= */
+document.querySelectorAll('.nav-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');if(t.dataset.p==='p4')drawCharts()})});
+function refresh(){
+if(!CFG)return;
+computeAll();
+if(!D.etat&&(FB_ON?firebase.auth().currentUser:true)){buildSetup();document.getElementById('ovlSetup').classList.add('show')}
+else document.getElementById('ovlSetup').classList.remove('show');
+document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();
+if(document.getElementById('p4').classList.contains('active'))drawCharts()}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+boot();
+</script>
+</body>
+</html>
