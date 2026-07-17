@@ -213,6 +213,22 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
 </div></div>
 
+<!-- DÉTAIL D'UN MOIS -->
+<div class="ovl" id="ovlMois" style="z-index:184"><div class="ovl-box" style="padding-top:6vh;position:relative;max-height:88vh;overflow-y:auto">
+<div style="position:absolute;top:12px;right:14px;font-size:22px;cursor:pointer;color:var(--text-muted)" onclick="document.getElementById('ovlMois').classList.remove('show')">✕</div>
+<div id="moisCorps"></div>
+</div></div>
+<!-- FICHE OPÉRATION -->
+<div class="ovl" id="ovlOp" style="z-index:186"><div class="ovl-box" style="padding-top:6vh;position:relative">
+<div style="position:absolute;top:12px;right:14px;font-size:22px;cursor:pointer;color:var(--text-muted)" onclick="document.getElementById('ovlOp').classList.remove('show')">✕</div>
+<div id="opCorps"></div>
+</div></div>
+<!-- NOUVEAUTÉS VERSION -->
+<div class="ovl" id="ovlDev" style="z-index:185"><div class="ovl-box" style="padding-top:8vh">
+<h2 id="devTitre">Quoi de neuf</h2>
+<div id="devCorps" style="font-size:13px;font-weight:600;color:var(--text-dim);line-height:1.55;margin:10px 0 16px;max-height:55vh;overflow-y:auto"></div>
+<button class="btn-engage" onclick="devCompris()">Compris</button>
+</div></div>
 <!-- BLOCAGE IMPORT -->
 <div class="ovl" id="ovlBloc" style="z-index:180"><div class="ovl-box" style="padding-top:12vh;text-align:center">
 <div style="font-size:44px;margin-bottom:10px">⛔</div>
@@ -231,6 +247,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="proj-cible">Cible : <span id="projCible">4 400 €</span> · dépensé à ce jour : <span id="projSpent">--</span></div>
 <div class="proj-bar"><div class="proj-fill" id="projFill" style="width:0%;background:#16a34a"></div></div>
 <div class="proj-msg" id="projMsg"></div>
+<div id="resteVivre" style="font-size:12px;font-weight:700;margin-top:6px;opacity:.85"></div>
 </div>
 <div class="traj" id="trajBox">
 <div class="traj-lbl"><span id="trajLbl">Trajectoire d'épargne</span><span class="tip-i" data-i="traj">i</span></div>
@@ -260,6 +277,10 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="card"><div class="card-t">Enveloppes du mois<span class="tip-i" data-i="env">i</span></div><div id="envList"></div></div>
 <div class="card"><div class="card-t">Dépenses du mois<span class="tip-i" data-i="dep">i</span></div><div id="depList"></div></div>
 <div class="card"><div class="card-t">Revenus du mois<span class="tip-i" data-i="rev">i</span></div><div id="revList"></div></div>
+<div class="card"><div class="card-t">Rechercher<span class="tip-i" data-i="recherche">i</span></div>
+<input type="text" id="rechInp" placeholder="Decathlon, vétérinaire, chèque…" style="width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600" oninput="lancerRecherche()">
+<div id="rechRes" style="margin-top:8px"></div>
+</div>
 <div class="card"><div class="card-t">Dépenses totales par mois<span class="tip-i" data-i="chtot">i</span></div><div class="chart-wrap"><canvas id="chartTotal"></canvas></div></div>
 <div class="card"><div class="card-t">Épargne : réel et projection<span class="tip-i" data-i="chep">i</span></div><div class="chart-wrap"><canvas id="chartEpargne"></canvas></div></div>
 
@@ -274,7 +295,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 
 <!-- ENVIES -->
 <div class="page" id="pEnvies">
-<div class="hdr"><h1>Récompenses</h1><p>Simulateur de dépenses plaisir<span class="tip-i" data-i="envies">i</span></p></div>
+<div class="hdr"><h1>Envies</h1><p>Le circuit officiel du plaisir : prévu, chiffré, assumé<span class="tip-i" data-i="envies">i</span></p></div>
 <div class="rw-rest-lbl">Budget extras disponible</div>
 <div class="rw-rest" id="rwRest">-- €</div>
 <div id="rwList"></div>
@@ -285,9 +306,9 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 
 <!-- SIMULATION -->
 <div class="page" id="pSimu">
-<div class="hdr"><h1>Simulation</h1><p>Et si ? Chiffré sur TON rythme réel</p></div>
+<div class="hdr"><h1>Simulation</h1><p>Et si ? Tu choisis le point de départ</p></div>
 <div class="card"><div class="card-t">Effort tenu<span class="tip-i" data-i="simeffort">i</span></div>
-<div class="fld"><label>€ de plus (ou de moins si négatif) mis de côté chaque mois</label><input type="number" step="10" id="simDx" placeholder="300"></div>
+<div class="fld"><label>Effort d'épargne (€/mois) — un montant négatif simule un relâchement</label><input type="number" step="10" id="simDx" placeholder="300"></div>
 <div class="fld"><label>Pendant combien de mois ? (vide = pour toujours)</label><input type="number" step="1" min="1" id="simN" placeholder="3"></div>
 <div class="fld"><label>Point de départ de la simulation</label><select class="inp" id="simBase"><option value="cible">En tenant la cible (4 400 €/mois de dépenses)</option><option value="reel">Au rythme réel actuel (mode miroir)</option></select></div>
 </div>
@@ -321,7 +342,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 </div>
 <div style="text-align:right;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Compte de destination</span><span class="tip-i" data-i="impsel">i</span></div><div class="imp-sel" id="accSel"></div>
 <div class="imp-zone" id="impZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><h3>Importer un ou plusieurs CSV</h3><p>Les opérations déjà connues sont ignorées</p></div><div style="text-align:center;margin:-8px 0 12px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Comment ça marche</span><span class="tip-i" data-i="impzone">i</span></div>
-<div class="card" id="impRes" style="display:none"><div class="card-t">Résultat</div><div id="impSum"></div></div>
+<div class="card" id="impRes" style="display:none"><div class="card-t">Rapport d'import</div><div id="impSum"></div></div>
 <div class="card"><div class="card-t">Notifications<span class="tip-i" data-i="notifs">i</span></div>
 <div id="notifStatus" style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px"></div>
 <button class="btn-engage" style="margin-top:0" id="btnNotif" onclick="activerNotifs()">Activer sur cet appareil</button>
@@ -329,7 +350,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="card-t" style="margin-top:14px">Historique des notifications<span class="tip-i" data-i="notifhisto">i</span></div>
 <div id="notifHisto" style="font-size:12px"></div>
 </div>
-<div class="card"><div class="card-t">Export de contrôle<span class="tip-i" data-i="export">i</span></div>
+<div class="card"><div class="card-t">Échange avec Claude<span class="tip-i" data-i="export">i</span></div>
+<button class="btn-engage" style="margin-top:0;background:var(--surface);color:var(--accent);border:2px solid var(--accent);box-shadow:none" onclick="copierPrompt()">Copier le prompt pour Claude</button>
 <button class="btn-engage" style="margin-top:0" onclick="exportJson()">Exporter toutes les données (JSON)</button>
 </div>
 <div class="card"><div class="card-t">Comptes suivis<span class="tip-i" data-i="cptadm">i</span></div><div id="cptAdmin"></div>
@@ -350,6 +372,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <!-- RÈGLES -->
 <div class="page" id="pRegles">
 <div class="hdr"><h1>Règles</h1><p>Le contrat — verrou intelligent sur les cibles</p></div>
+<div class="card"><div class="card-t">Journal de développement<span class="tip-i" data-i="devlog">i</span></div><div id="devlogList"></div></div>
 <div class="card"><div class="card-t">Cibles en vigueur<span class="tip-i" data-i="cibles">i</span></div><div id="ciblesList"></div></div>
 <div class="card"><div class="card-t">Demandes en cours<span class="tip-i" data-i="pending">i</span></div><div id="pendList"></div></div>
 <div class="card"><div class="card-t">Modifier une cible<span class="tip-i" data-i="verrou">i</span></div>
@@ -360,17 +383,18 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 </div>
 <div class="card"><div class="card-t">Journal des modifications<span class="tip-i" data-i="journal">i</span></div><div id="journalList"></div></div>
 <div class="card">
-<div class="rule-block"><div class="rule-cat">🎯 Cible : 4 400 €/mois toutes dépenses</div><div class="rule-desc">Le foyer gagne ~5 300 €/mois. Dépenser 4 400 € max = 900 € de côté chaque mois. L'appli surveille CE chiffre : le total.</div></div>
+<div class="rule-block"><div class="rule-cat">🎯 Cible : <span data-cfg="cible"></span>/mois toutes dépenses</div><div class="rule-desc">Le foyer gagne environ <span data-cfg="revenusRef"></span>/mois. Dépenser <span data-cfg="cible"></span> max = <span data-cfg="epargneCible"></span> de côté chaque mois. L'appli surveille CE chiffre : le total.</div></div>
 <div class="rule-block"><div class="rule-cat">🔁 Virements internes neutralisés</div><div class="rule-desc">Un virement entre vos comptes n'est ni un revenu ni une dépense. L'appli les repère et les ignore.</div></div>
 <div class="rule-block"><div class="rule-cat">💰 Revenus</div><div class="rule-desc">Salaires, CAF, remboursements CPAM et prévoyance. Ligne par ligne.</div></div>
-<div class="rule-block"><div class="rule-cat">🔒 Charges fixes — ≈ 2 450 €/mois</div><div class="rule-desc">Emprunts, assurances, énergie, impôts, école, CESU… Suivies, pas plafonnées : ça ne bouge qu'en résiliant.</div></div>
-<div class="rule-block"><div class="rule-cat">🥖 Courses — 1 000 €/mois</div><div class="rule-desc">Supermarchés, boulangerie, boucherie, marché.</div></div>
-<div class="rule-block"><div class="rule-cat">⛽ Carburant — 220 €/mois</div><div class="rule-desc">Trajets travail et déplacements courants.</div></div>
-<div class="rule-block"><div class="rule-cat">🩺 Santé — 150 €/mois provisionné</div><div class="rule-desc">Médecins, pharmacie, psy, fertilité. Ce qui n'est pas dépensé reste dispo.</div></div>
-<div class="rule-block"><div class="rule-cat">🔨 Travaux — 200 €/mois provisionné</div><div class="rule-desc">Bricolage et entretien courant. Les travaux fissures ont leur circuit à part, hors appli.</div></div>
-<div class="rule-block"><div class="rule-cat">📱 Abonnements — 80 €/mois</div><div class="rule-desc">Tout le numérique qui se prélève chaque mois. Les doublons remontent dans Optimisations.</div></div>
-<div class="rule-block"><div class="rule-cat">💎 Extras — 300 €/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire : restos, spa, coiffeur, shopping, sorties, tabac, retraits, PayPal…</div></div>
-<div class="rule-block"><div class="rule-cat">🐷 Épargne — 900 €/mois</div><div class="rule-desc">L'objectif. Chaque euro non dépensé est un euro de côté. L'appli affiche la date de chaque palier à TON rythme réel.</div></div>
+<div class="rule-block"><div class="rule-cat">🔒 Charges fixes — ≈ <span data-cfg="fixesRef"></span>/mois</div><div class="rule-desc">Emprunts, assurances, énergie, impôts, école, CESU… Suivies, pas plafonnées : ça ne bouge qu'en résiliant.</div></div>
+<div class="rule-block"><div class="rule-cat">🥖 Courses — <span data-cfg="env.courses"></span>/mois</div><div class="rule-desc">Supermarchés, boulangerie, boucherie, marché.</div></div>
+<div class="rule-block"><div class="rule-cat">⛽ Carburant — <span data-cfg="env.carburant"></span>/mois</div><div class="rule-desc">Trajets travail et déplacements courants.</div></div>
+<div class="rule-block"><div class="rule-cat">🩺 Santé — <span data-cfg="env.sante"></span>/mois, cumulable</div><div class="rule-desc">Médecins, pharmacie, psy, fertilité. Ce qui n'est pas dépensé reste dispo.</div></div>
+<div class="rule-block"><div class="rule-cat">🔨 Travaux — <span data-cfg="env.trav"></span>/mois, cumulable</div><div class="rule-desc">Bricolage et entretien courant. Les travaux fissures ont leur circuit à part, hors appli.</div></div>
+<div class="rule-block"><div class="rule-cat">📱 Abonnements — <span data-cfg="env.abo"></span>/mois</div><div class="rule-desc">Tout le numérique qui se prélève chaque mois. Les doublons remontent dans Optimisations.</div></div>
+<div class="rule-block"><div class="rule-cat">💎 Extras — <span data-cfg="env.ext"></span>/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire : restos, spa, coiffeur, shopping, sorties, tabac, retraits, PayPal…</div></div>
+<div class="rule-block"><div class="rule-cat">🐷 Épargne — <span data-cfg="epargneCible"></span>/mois</div><div class="rule-desc">L'objectif. Chaque euro non dépensé est un euro de côté. L'appli affiche la date de chaque palier à TON rythme réel.</div></div>
+<div class="rule-block"><div class="rule-cat">👆 Tout s'ouvre d'un tap</div><div class="rule-desc">Un chiffre qu'on ne peut pas interroger est un chiffre mort. Chaque barre, chaque famille, chaque enveloppe s'ouvre d'un tap, jusqu'à l'opération elle-même et sa fiche : nom dicible, catégorie, note. Les libellés bancaires sybillins sont traduits ; le brut reste visible en petit, pour vérification.</div></div>
 <div class="rule-block"><div class="rule-cat">⛔ Blocage du samedi</div><div class="rule-desc">Chaque compte courant doit être importé au moins une fois par semaine. Au-delà de 7 jours, l'appli se verrouille : importer avant de consulter. On ne regarde jamais des chiffres faux.</div></div>
 <div class="rule-block"><div class="rule-cat">🔄 Comment les pronostics évoluent</div><div class="rule-desc">La simulation imagine : elle ne change rien. Le défi promet : il ne change rien non plus, il sera jugé. Une optimisation cochée compte tout de suite — c'est un acte fait, et l'appli vérifie qu'il le reste. La seule chose qui fait bouger les pronostics : LES IMPORTS. Un mois tenu, importé, remonte le rythme d'environ un tiers ; trois mois tenus, plein effet ; la provision gros achats se dégonfle en un an de sobriété. L'appli ne croit que les relevés.</div></div>
 <div class="rule-block"><div class="rule-cat">⚖️ Le principe</div><div class="rule-desc">L'appli t'alerte quand il est encore temps d'agir — pas le 31. Les cibles changent par le verrou : durcir = tout de suite, adoucir = 72 h ou l'accord de l'autre. Tout est noté au journal.</div></div>
@@ -396,7 +420,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=10; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=12; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -409,6 +433,35 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    copiées dans budget/config (Firebase ou localStorage) qui devient la seule
    source de vérité. Modifs ensuite : console Firebase ou Claude — jamais l'UI
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
+/* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
+const DEVLOG=[
+{v:12,date:'2026-07-17',origine:"S\u00e9ance d'am\u00e9liorations avec Paul : \u00ab tout doit s'ouvrir, pas de chiffre en l'air, des libell\u00e9s dicibles \u00bb",
+ch:["TOUT S'OUVRE D'UN TAP : barres de mois, familles, enveloppes, revenus \u2014 jusqu'\u00e0 la fiche de chaque op\u00e9ration (renommer, cat\u00e9gorie, note)","Renommer une op\u00e9ration cr\u00e9e une r\u00e8gle : toutes les op\u00e9rations semblables prennent le nom dicible","Recherche dans deux ans d'op\u00e9rations, avec totaux et moyenne mensuelle","D\u00e9tail d'un mois au tap sur sa barre, avec comparaison au m\u00eame mois de l'an dernier","Reste-\u00e0-vivre quotidien sous la projection (X \u20ac/jour pour tenir la cible)","R\u00e9serve visible des enveloppes cumulables Sant\u00e9/Travaux (12 mois)","\u00c9change avec Claude complet : prompt int\u00e9gr\u00e9 \u00e0 copier, retour JSON import\u00e9 comme un relev\u00e9 (liste blanche stricte : nommages, ch\u00e8ques, notes)"],
+cons:["Rien \u00e0 refaire c\u00f4t\u00e9 serveur : juste pousser index.html","Essaie le geste : touche une barre de mois, puis une op\u00e9ration","Pour la premi\u00e8re analyse : bouton Copier le prompt + export JSON \u2192 Claude"]},
+{v:11,date:'2026-07-17',origine:"Relecture compl\u00e8te demand\u00e9e par Paul + retours d'usage (solde \u00e0 retaper, sous-titres p\u00e9rim\u00e9s)",
+ch:["Contr\u00f4le de solde VIVANT : l'\u00e9cart se recalcule tout seul \u00e0 chaque import (\u00e0 date de contr\u00f4le constante) \u2014 plus jamais de ressaisie apr\u00e8s un import","Ce journal de d\u00e9veloppement, avec consignes \u00e0 chaque version et bouton Compris","Les montants de l'onglet R\u00e8gles suivent maintenant la config r\u00e9elle (plus de chiffres fig\u00e9s)","Sant\u00e9/Travaux dits \u00ab cumulables \u00bb (le mot \u00ab provision \u00bb est r\u00e9serv\u00e9 aux gros achats)","Rappel de r\u00e9import PayPal dans la ligne des imports (alerte \u00e0 45 j)","Le bandeau de mise \u00e0 jour rev\u00e9rifie quand l'app revient \u00e0 l'\u00e9cran","Purge automatique des journaux d'import","Sous-titres corrig\u00e9s (Simulation, Envies)"],
+cons:["Recoller code.gs dans Apps Script (purge du journal des notifications)","Faire les 4 contr\u00f4les de solde : ils resteront valables \u00e0 vie","R\u00e9exporter le Commun du 20/03 au 10/04 pour trancher la zone grise","Partager le CSV PayPal \u00e0 l'app (jamais import\u00e9 en ligne)"]},
+{v:10,date:'2026-07-17',origine:"Bug d\u00e9couvert par Paul : la croix des notifications blanchissait l'\u00e9cran",
+ch:["Croix de retrait d'appareil r\u00e9par\u00e9e (pi\u00e8ge document.write des attributs onclick)"],cons:["Retirer l'ancien appareil, r\u00e9activer les notifications"]},
+{v:9,date:'2026-07-17',origine:"Analyse du premier export JSON de contr\u00f4le",
+ch:["Virements internes : les formats VIR INST / VIR. DE sont reconnus (le couple 600 \u20ac du 17/04 s'apparie)","D\u00e9tecteur d'anomalies affin\u00e9 : plus de faux positifs sur la famille \u00e9largie","Export JSON int\u00e9gral (ch\u00e8ques, contr\u00f4les, journaux, PayPal\u2026)","Un achat rembours\u00e9 ne compte plus nulle part","9 r\u00e8gles de cat\u00e9gorisation : nounou, Pajemploi, \u00e9cole, assurances\u2026"],cons:["Refaire un export JSON apr\u00e8s quelques jours pour v\u00e9rification"]},
+{v:8,date:'2026-07-17',origine:"Demande de Paul : rapports lisibles et app qui se surveille",
+ch:["Rapport d'import en fran\u00e7ais, op\u00e9ration par op\u00e9ration avec raison et montant","Auto-d\u00e9tection d'anomalies avec bouton d'export direct"],cons:[]},
+{v:7,date:'2026-07-17',origine:"Id\u00e9e de Paul : exploiter le flux de partage de l'appli bancaire",
+ch:["Partage direct : app CE \u2192 Partager \u2192 Budget \u2192 import automatique","Bandeau de mise \u00e0 jour en haut d'\u00e9cran"],cons:["R\u00e9installer l'app pour activer le partage (manifest modifi\u00e9)","Ouvrir l'app une fois avant le premier partage"]},
+{v:6,date:'2026-07-17',origine:"Demande de Paul : tra\u00e7abilit\u00e9 et talon de ch\u00e8ques",
+ch:["Ch\u00e8ques : talon num\u00e9rique par num\u00e9ro et ch\u00e9quier, nommage + cat\u00e9gorie","Fiabilit\u00e9 : contr\u00f4le des soldes, zones grises, d\u00e9bits obscurs","Historique des imports et des notifications"],cons:[]},
+{v:5,date:'2026-07-17',origine:"D\u00e9bogage notifications avec Paul (HTTP 200 mais rien \u00e0 l'\u00e9cran)",
+ch:["R\u00e9ception des notifications quand l'app est ouverte (premier plan)"],cons:[]},
+{v:4,date:'2026-07-17',origine:"Erreur \u00e0 l'activation rep\u00e9r\u00e9e par Paul (appId manquant)",
+ch:["Configuration Firebase compl\u00e9t\u00e9e pour le messaging"],cons:[]},
+{v:3,date:'2026-07-17',origine:"D\u00e9cisions de Paul : blocage hebdomadaire et point du samedi",
+ch:["Blocage \u26d4 au-del\u00e0 de 7 jours sans import des comptes courants","Notification du samedi (push + seul email du syst\u00e8me)","Point d'encodage corrig\u00e9"],cons:[]},
+{v:2,date:'2026-07-17',origine:"Audit d'\u00e9quilibre demand\u00e9 par Paul (\u00ab pas un tableau noir pour un tableau noir \u00bb)",
+ch:["Simulation : le point de d\u00e9part se choisit (cible tenue par d\u00e9faut, rythme r\u00e9el en miroir)","Courbes born\u00e9es \u00e0 z\u00e9ro avec date d'\u00e9puisement","La trajectoire rouge affiche aussi la sortie","Import et alerte PAR COMPTE (chacun importe ses relev\u00e9s)","Bloc \u00ab Comment les pronostics \u00e9voluent \u00bb"],cons:[]},
+{v:1,date:'2026-07-16',origine:"Chantier initial : app compl\u00e8te apr\u00e8s l'analyse des comptes (don 60 000 \u20ac, sinistre, PayPal, Amazon)",
+ch:["7 onglets, projection, trajectoire, optimisations d\u00e9tect\u00e9es, envies, simulation, d\u00e9fi, verrou intelligent, notifications, 35 aides \u2148"],cons:[]}
+];
 const CFG_DEFAULTS={
 cible:4400,epargneCible:900,revenusRef:5300,fixesRef:2450,seuilExcep:250,
 env:{courses:1000,carburant:220,sante:150,trav:200,abo:80,ext:300},
@@ -531,7 +584,7 @@ return all}
 /* ================= DATA LAYER ================= */
 const FB_ON=!!FIREBASE_CONFIG.apiKey;
 const SK='budgetMeneyV2';
-let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{}};
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{},devlogVus:{},notes:{}};
 let fbdb=null;
 function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
 function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
@@ -549,7 +602,7 @@ firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
 firebase.auth().onAuthStateChanged(u=>{
 if(!u){document.getElementById('ovlLogin').classList.add('show');return}
 document.getElementById('ovlLogin').classList.remove('show');
-fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{}};
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
 CFG=D.config;applyCfg();refresh()})})}
@@ -627,6 +680,8 @@ function ligneTx(t){
 return`<div class="row"><div class="row-l" style="font-size:11px;line-height:1.35">${t.dd} \u00b7 <b>${t.l}</b>${t.chq?' n\u00b0'+t.chq:''}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${(t.lib||'').slice(0,34)}</span></div><div class="row-v ${t.amt<0?'rd':'g'}" style="font-size:11px">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div></div>`}
 async function traiterFichier(fname,buf){
 let raw=new TextDecoder('utf-8').decode(new Uint8Array(buf));
+if(raw.trimStart().startsWith('{')){
+try{const obj=JSON.parse(raw);return importerRetour(obj)}catch(e){return`<div class="row"><div class="row-l">${fname}</div><div class="row-v rd">JSON illisible</div></div>`}}
 if(isPayPalCsv(raw)){
 const ptx=parsePayPal(raw);
 const ex=D.pp||{};const b={};const nouv=[];
@@ -647,6 +702,8 @@ if(nouv.length)writeBatch('tx/'+acc,batch);
 write('meta/lastImp/'+acc,new Date().toISOString());
 const dts=tx.map(t=>t.date).sort();
 write('importLog/i'+Date.now()+Math.random().toString(36).slice(2,5),{acc,nb:nouv.length,lues:tx.length,min:dts[0],max:dts[dts.length-1],par:userEmail(),ts:Date.now()});
+const ilKeys=Object.keys(D.importLog||{}).sort();
+if(ilKeys.length>60)for(const k of ilKeys.slice(0,ilKeys.length-60))write('importLog/'+k,null);
 matchEngagements(tx);
 let h;
 if(!nouv.length)h=`<div style="font-size:12px;font-weight:700;margin:8px 0 2px">${COMPTES[acc].lbl} : rien de nouveau \u2014 les ${tx.length} op\u00e9ration(s) de ce fichier \u00e9taient d\u00e9j\u00e0 dans l\u2019appli (p\u00e9riode ${dts[0].split('-').reverse().join('/')} \u2192 ${dts[dts.length-1].split('-').reverse().join('/')}).</div>`;
@@ -884,20 +941,39 @@ const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.fl
 zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
 note.innerHTML=`\u00c0 cette date, il ne reste rien. Ni pour les travaux, ni pour un impr\u00e9vu. <b>La sortie existe : en tenant la cible de ${fs(CIBLE)}, le rythme devient +${fs(EPARGNE_CIBLE)}/mois et cette date dispara\u00eet.</b>`}
 else{box.className='traj';main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · ça stagne (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès. À ce rythme, les paliers n'arrivent jamais.`}}
+let envOuverte=null;
+function togEnv(c){envOuverte=envOuverte===c?null:c;updateEnv()}
+function reserveCumul(c){
+if(c!=='sante'&&c!=='trav')return null;
+const ms=fullMonthsBack(12);if(!ms.length)return null;
+let r=0;for(const mk of ms)r+=ENV[c]-depOf(txMonth(mk).filter(t=>t.c===c));
+return Math.round(r)}
 function updateEnv(){
 const mtx=txMonth(curMonth());
 const defs=[['courses','Courses',ENV.courses],['carburant','Carburant',ENV.carburant],['sante','Santé',ENV.sante],['trav','Travaux',ENV.trav],['abo','Abonnements',ENV.abo],['ext','Extras',ENV.ext]];
 document.getElementById('envList').innerHTML=defs.map(([c,lbl,bud])=>{
-const sp=depOf(mtx.filter(t=>t.c===c));const r=sp/bud;
+const txs=mtx.filter(t=>t.c===c&&t.amt<0);
+const sp=depOf(txs);const r=sp/bud;
 const col=r<=0.8?'#16a34a':r<=1?'#d97706':'#dc2626';
-return`<div class="env"><div class="env-n">${lbl}</div><div class="env-track"><div class="env-fill" style="width:${Math.min(100,r*100)}%;background:${col}"></div></div><div class="env-v">${fs(sp)} / ${fs(bud)}</div></div>`}).join('')}
+const res=reserveCumul(c);
+const resTxt=res===null?'':(res>=0?` <span style="font-size:10px;color:#16a34a;font-weight:700">+${fs(res)} en r\u00e9serve</span>`:` <span style="font-size:10px;color:#dc2626;font-weight:700">r\u00e9serve \u00e9puis\u00e9e</span>`);
+return`<div class="env" style="cursor:pointer" onclick="togEnv('${c}')"><div class="env-n">${envOuverte===c?'\u25be':'\u25b8'} ${lbl}${resTxt}</div><div class="env-track"><div class="env-fill" style="width:${Math.min(100,r*100)}%;background:${col}"></div></div><div class="env-v">${fs(sp)} / ${fs(bud)}</div></div>`
++(envOuverte===c?'<div style="padding:4px 0 8px 10px;border-left:2px solid var(--border)">'+(txs.length?txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>ligneOp(t,{small:true,cpt:true})).join(''):'<div style="font-size:11px;color:var(--text-muted);font-weight:600">Aucune d\u00e9pense ce mois-ci.</div>')+'</div>':'')}).join('')}
+let famOuverte=null,revOuvert=false;
+function togFam(g){famOuverte=famOuverte===g?null:g;updateListes()}
+function togRev(l){revOuvert=revOuvert===l?null:l;updateListes()}
 function updateListes(){
 const mtx=txMonth(curMonth());
-const revs={};mtx.filter(t=>t.amt>0).forEach(t=>{revs[t.l]=(revs[t.l]||0)+t.amt});
-document.getElementById('revList').innerHTML=Object.entries(revs).sort((a,b)=>b[1]-a[1]).map(([l,v])=>`<div class="row"><div class="row-l">${l}</div><div class="row-v g">+${fm(v)}</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun revenu importé ce mois-ci.</div>';
-const deps={};mtx.filter(t=>t.amt<0).forEach(t=>{const g={fix:'Charges fixes',courses:'Courses',carburant:'Carburant',sante:'Santé',trav:'Travaux',abo:'Abonnements',vac:'Vacances',ess:'Véhicule / essentiel',ext:'Extras'}[t.c]||'Autres';deps[g]=(deps[g]||0)+Math.abs(t.amt)});
-const tot=Object.values(deps).reduce((s,v)=>s+v,0);
-document.getElementById('depList').innerHTML=Object.entries(deps).sort((a,b)=>b[1]-a[1]).map(([l,v])=>`<div class="row"><div class="row-l">${l}</div><div class="row-v rd">−${fm(v)}</div></div>`).join('')+`<div class="row" style="border-top:2px solid var(--border)"><div class="row-l" style="font-weight:800;color:var(--text)">Total</div><div class="row-v ${tot>CIBLE?'rd':'n'}">−${fm(tot)}</div></div>`}
+const revs={};mtx.filter(t=>t.amt>0).forEach(t=>{if(!revs[t.l])revs[t.l]={s:0,txs:[]};revs[t.l].s+=t.amt;revs[t.l].txs.push(t)});
+document.getElementById('revList').innerHTML=Object.entries(revs).sort((a,b)=>b[1].s-a[1].s).map(([l,v])=>
+`<div class="row" style="cursor:pointer" onclick="togRev('${l.replace(/'/g,"\\'")}')"><div class="row-l">${revOuvert===l?'\u25be':'\u25b8'} ${l}</div><div class="row-v g">+${fm(v.s)}</div></div>`
++(revOuvert===l?'<div style="padding-left:10px;border-left:2px solid var(--border);margin:2px 0 6px">'+v.txs.map(t=>ligneOp(t,{small:true,cpt:true})).join('')+'</div>':'')).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun revenu importé ce mois-ci.</div>';
+const deps={};mtx.filter(t=>t.amt<0).forEach(t=>{const g=FAMN[t.c]||'Autres';if(!deps[g])deps[g]={s:0,txs:[]};deps[g].s+=Math.abs(t.amt);deps[g].txs.push(t)});
+const tot=Object.values(deps).reduce((s,v)=>s+v.s,0);
+document.getElementById('depList').innerHTML=Object.entries(deps).sort((a,b)=>b[1].s-a[1].s).map(([l,v])=>
+`<div class="row" style="cursor:pointer" onclick="togFam('${l}')"><div class="row-l">${famOuverte===l?'\u25be':'\u25b8'} ${l} <span style="font-weight:500;color:var(--text-muted)">\u00d7${v.txs.length}</span></div><div class="row-v rd">\u2212${fm(v.s)}</div></div>`
++(famOuverte===l?'<div style="padding-left:10px;border-left:2px solid var(--border);margin:2px 0 6px">'+v.txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>ligneOp(t,{small:true,cpt:true})).join('')+'</div>':'')).join('')
++`<div class="row" style="border-top:2px solid var(--border)"><div class="row-l" style="font-weight:800;color:var(--text)">Total</div><div class="row-v ${tot>CIBLE?'rd':'n'}">\u2212${fm(tot)}</div></div>`}
 function soldeCompte(acc){
 if(!D.etat)return null;
 const d0=(D.etat.datesSoldes&&D.etat.datesSoldes[acc])||D.etat.dateSoldes;
@@ -965,7 +1041,10 @@ const parts=comptesTries().map(([id,c])=>{
 const d=li[id]!==undefined?dj(li[id]):null;
 const late=d===null||(c.type==='courant'?d>7:d>35);
 return{lbl:c.lbl.split(' ')[0],d,late,courant:c.type==='courant'}});
-document.getElementById('lastImp').innerHTML=parts.map(p=>`${p.lbl} ${p.d===null?'jamais':p.d+' j'}${p.late?' \u26a0':''}`).join(' \u00b7 ');
+let ppTxt='';
+if(li.paypal!==undefined){const dpp=dj(li.paypal);ppTxt=` \u00b7 PayPal ${dpp} j${dpp>45?' \u26a0':''}`}
+else ppTxt=' \u00b7 PayPal jamais \u26a0';
+document.getElementById('lastImp').innerHTML=parts.map(p=>`${p.lbl} ${p.d===null?'jamais':p.d+' j'}${p.late?' \u26a0':''}`).join(' \u00b7 ')+ppTxt;
 const days=Math.max(...parts.filter(p=>p.courant).map(p=>p.d===null?999:p.d));
 if(days>14){el.className='alert over';el.textContent=`${Math.floor(days)} jours sans import. C\u2019est comme ça que 54 000 € ont disparu sans que personne ne voie rien. Importe. Maintenant.`}
 else if(days>7){el.className='alert danger';el.textContent=`${Math.floor(days)} jours sans import. Un import par semaine, sinon l\u2019appli ne sert à rien.`}
@@ -999,9 +1078,10 @@ const ms=monthsWithData();if(!ms.length)return;
 const dep=ms.map(m=>depOf(txMonth(m)));
 const cfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'JetBrains Mono',size:10}}},x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10}}}}};
 if(ch1)ch1.destroy();
+const chartMois=ms;
 ch1=new Chart(document.getElementById('chartTotal'),{type:'bar',data:{labels:ms,datasets:[
 {data:dep,backgroundColor:ms.map((m,i)=>m===curMonth()?'#c7cbd8':(dep[i]>CIBLE?'#dc2626':'#16a34a')),borderRadius:8},
-{data:ms.map(()=>CIBLE),type:'line',borderColor:'#4f46e5',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false}]},options:cfg});
+{data:ms.map(()=>CIBLE),type:'line',borderColor:'#4f46e5',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false}]},options:Object.assign({},cfg,{onClick:(e,els)=>{if(els&&els.length)openMois(chartMois[els[0].index])}})});
 const ep0=epargneActuelle();const net=netMensuelMoyen();
 if(ep0===null)return;
 const labels=[...ms];const epc=[];
@@ -1051,6 +1131,10 @@ function appliquerPending(id,p,mode){
 write('config/'+CHAMPS[p.key].path,p.nv);
 write('config/journal/j'+Date.now(),{key:p.key,ov:p.ov,nv:p.nv,par:p.par,ts:Date.now(),type:mode});
 write('config/pending/'+id,null)}
+function updateCfgSpans(){
+document.querySelectorAll('[data-cfg]').forEach(el=>{
+const p=el.dataset.cfg.split('.');let v=CFG;for(const s of p)v=v&&v[s];
+if(v!==undefined)el.textContent=fs(v)})}
 function updateCibles(){
 document.getElementById('ciblesList').innerHTML=Object.entries(CHAMPS).map(([k,c])=>`<div class="cbl"><span>${c.lbl}</span><span class="cv">${fs(valChamp(k))}</span></div>`).join('');
 const sel=document.getElementById('modChamp');
@@ -1154,19 +1238,27 @@ const b=document.getElementById('chb_'+cle).value.trim();
 const cat=document.getElementById('chc_'+cle).value;
 if(!b){alert('Indique le b\u00e9n\u00e9ficiaire ou l\u2019objet.');return}
 write('cheques/'+cle,{benef:b,cat,par:userEmail(),ts:Date.now()})}
+function soldeCompteAuJour(acc,dateIso){
+if(!D.etat)return null;
+const d0=(D.etat.datesSoldes&&D.etat.datesSoldes[acc])||D.etat.dateSoldes;
+const bag=D.tx[acc]||{};let v=(D.etat.soldes&&D.etat.soldes[acc])||0;
+for(const k of Object.keys(bag)){const t=bag[k];if(t.date>d0&&t.date<=dateIso)v+=t.amt}return v}
+function ecartVivant(acc){
+const ct=(D.controles||{})[acc];if(!ct)return null;
+const dj=ct.dateIso||new Date(ct.ts).toISOString().slice(0,10);
+return{ecart:Math.round((ct.reel-soldeCompteAuJour(acc,dj))*100)/100,dateIso:dj,reel:ct.reel}}
 function verifierSolde(acc){
-const reel=parseFloat(prompt('Solde r\u00e9el du compte '+((COMPTES[acc]||{}).lbl||acc)+' (espace bancaire, maintenant) :'));
+const reel=parseFloat(prompt('Solde EXACT du compte '+((COMPTES[acc]||{}).lbl||acc)+' affich\u00e9 par la banque, maintenant :'));
 if(isNaN(reel))return;
-const calc=soldeCompte(acc);
-write('controles/'+acc,{reel,calc:Math.round(calc*100)/100,ecart:Math.round((reel-calc)*100)/100,ts:Date.now()})}
+write('controles/'+acc,{reel,dateIso:new Date().toISOString().slice(0,10),ts:Date.now()})}
 function detecterAnomalies(){
 const an=[];
 /* 1. Mouvements familiaux non appari\u00e9s (devraient \u00eatre des virements internes) */
 const suspects=ALL.filter(t=>!t._int&&!t._annule&&Math.abs(t.amt)>=50&&INT_LIB.test(t.lib)&&!/CHEQUE/i.test(t.lib));
 if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom de la famille non reconnu(s) comme virement interne \u2014 risque de fausses d\u00e9penses/faux revenus ('+suspects.slice(0,3).map(t=>t.dd+' '+fs(Math.abs(t.amt))).join(', ')+')'});
 /* 2. \u00c9carts de solde contr\u00f4l\u00e9s */
-for(const[id,c]of comptesTries()){const ct=(D.controles||{})[id];
-if(ct&&Math.abs(ct.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ct.ecart)+' sur '+c.lbl+' au dernier contr\u00f4le \u2014 des op\u00e9rations manquent probablement'})}
+for(const[id,c]of comptesTries()){const ev=ecartVivant(id);
+if(ev&&Math.abs(ev.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ev.ecart)+' sur '+c.lbl+' (contr\u00f4le du '+ev.dateIso.split('-').reverse().join('/')+') \u2014 des op\u00e9rations manquent sur cette p\u00e9riode'})}
 /* 3. Zones grises */
 const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
 let nbGaps=0;
@@ -1196,10 +1288,11 @@ ${an.map(a=>`<div style="font-size:11px;font-weight:600;color:var(--text-dim);ma
 else h+='<div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:10px">\u2713 Aucune anomalie d\u00e9tect\u00e9e dans les donn\u00e9es.</div>';
 h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px">Contr\u00f4le des soldes (banque vs appli) :</div>';
 h+=comptesTries().map(([id,c])=>{
-const ct=(D.controles||{})[id];
+const ev=ecartVivant(id);
 let v='<span style="color:var(--text-muted)">jamais contr\u00f4l\u00e9</span>';
-if(ct){const col=Math.abs(ct.ecart)<1?'g':Math.abs(ct.ecart)<50?'o':'rd';
-v=`<span class="${col}">\u00e9cart ${fm(ct.ecart)}</span> <span style="font-weight:500;color:var(--text-muted)">(${new Date(ct.ts).toLocaleDateString('fr-FR')})</span>`}
+if(ev){const col=Math.abs(ev.ecart)<1?'g':Math.abs(ev.ecart)<50?'o':'rd';
+const plusRecent=(D.tx[id]&&Object.values(D.tx[id]).some(t=>t.date>ev.dateIso));
+v=`<span class="${col}">\u00e9cart ${fm(ev.ecart)}</span> <span style="font-weight:500;color:var(--text-muted)">(au ${ev.dateIso.split('-').reverse().join('/')})${plusRecent?' \u00b7 revérifiable':''}</span>`}
 return`<div class="row"><div class="row-l">${c.lbl}</div><div class="row-v" style="font-size:11px">${v} <span style="cursor:pointer;color:var(--accent);font-weight:800" onclick="verifierSolde('${id}')">V\u00e9rifier</span></div></div>`}).join('');
 /* zones grises : trous > 10 j sur comptes courants, 12 derniers mois */
 const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
@@ -1226,13 +1319,67 @@ const nh=document.getElementById('notifHisto');
 if(nh){const ns=Object.values(D.notifLog||{}).sort((a,b)=>b.ts-a.ts).slice(0,15);
 nh.innerHTML=ns.length?ns.map(n=>`<div class="row"><div class="row-l" style="font-size:11px">${n.t}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${new Date(n.ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><br><span style="font-weight:500;color:var(--text-dim);font-size:11px">${n.b}</span></div></div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune notification serveur envoy\u00e9e pour l\u2019instant.</div>'}}
 
+/* ================= ÉCHANGE AVEC CLAUDE ================= */
+const PROMPT_CLAUDE=`Tu re\u00e7ois l'export JSON de l'application Budget Meney (suivi budg\u00e9taire familial, cat\u00e9gories : courses, carburant, sante, trav, abo, ext, fix, vac, rev).
+MISSION : analyser les transactions (n\u0153ud tx), rep\u00e9rer les libell\u00e9s obscurs ou mal cat\u00e9goris\u00e9s (label \u00ab Non class\u00e9 \u00bb ou cat\u00e9gorie douteuse), les ch\u00e8ques sans b\u00e9n\u00e9ficiaire (n\u0153ud cheques vs transactions avec chq), et toute incoh\u00e9rence (doublons, virements internes non appari\u00e9s, \u00e9carts).
+R\u00c9PONSE ATTENDUE : un fichier JSON t\u00e9l\u00e9chargeable respectant EXACTEMENT ce sch\u00e9ma :
+{"type":"budget-retour","version":1,
+"regles":[{"p":"MOTIF_REGEX_ECHAPPE","c":"categorie","l":"Nom dicible"}],
+"cheques":{"compte_numero":{"benef":"Nom","cat":"categorie"}},
+"notes":{"compte_cle":"texte de note"},
+"commentaire":"tes observations libres"}
+Les r\u00e8gles s'appliquent par test regex insensible \u00e0 la casse sur libell\u00e9+d\u00e9tail. N'invente rien : si un libell\u00e9 est ind\u00e9chiffrable, ne cr\u00e9e pas de r\u00e8gle et signale-le en commentaire. L'utilisateur importera ce fichier dans l'app, qui n'acceptera QUE ces champs.`;
+async function copierPrompt(){
+try{await navigator.clipboard.writeText(PROMPT_CLAUDE);alert('Prompt copi\u00e9. Colle-le dans une conversation avec Claude, avec le fichier JSON export\u00e9.')}
+catch(e){prompt('Copie manuellement :',PROMPT_CLAUDE)}}
+function importerRetour(obj){
+if(obj.type!=='budget-retour'){alert('Fichier non reconnu.');return''}
+const nbR=(obj.regles||[]).length,nbC=Object.keys(obj.cheques||{}).length,nbN=Object.keys(obj.notes||{}).length;
+if(!confirm(`Retour de Claude : ${nbR} r\u00e8gle(s) de nommage, ${nbC} ch\u00e8que(s), ${nbN} note(s).${obj.commentaire?'\n\nCommentaire : '+String(obj.commentaire).slice(0,300):''}\n\nAppliquer ?`))return'<div class="row"><div class="row-l">Retour de Claude</div><div class="row-v n">annul\u00e9</div></div>';
+let ok=0;
+for(const r of obj.regles||[]){if(r.p&&r.c&&r.l&&typeof r.p==='string'&&r.p.length>=3){write('config/reglesPerso/r'+Date.now()+Math.random().toString(36).slice(2,4),{p:String(r.p).slice(0,120),c:String(r.c),l:String(r.l).slice(0,40)});ok++}}
+for(const[k,v]of Object.entries(obj.cheques||{})){if(v&&v.benef){write('cheques/'+String(k).slice(0,40),{benef:String(v.benef).slice(0,40),cat:String(v.cat||'ext'),par:'claude via '+userEmail(),ts:Date.now()});ok++}}
+for(const[k,v]of Object.entries(obj.notes||{})){write('notes/'+String(k).slice(0,60),String(v).slice(0,120));ok++}
+write('importLog/i'+Date.now(),{acc:'retour-claude',nb:ok,lues:nbR+nbC+nbN,par:userEmail(),ts:Date.now()});
+return`<div style="font-size:12px;font-weight:800;margin:8px 0 2px">Retour de Claude : ${ok} \u00e9l\u00e9ment(s) appliqu\u00e9(s) \u2713</div><div style="font-size:11px;font-weight:600;color:var(--text-muted)">Uniquement nommages, ch\u00e8ques et notes \u2014 jamais les transactions ni les cibles.</div>`}
+
 /* ================= EXPORT JSON ================= */
 function exportJson(){
-const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
+const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,devlogVus:D.devlogVus,notes:D.notes,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
 const blob=new Blob([JSON.stringify(dump,null,1)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);
 a.download='budget-export-'+new Date().toISOString().slice(0,10)+'.json';
 document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href)}
+
+/* ================= JOURNAL DE DÉVELOPPEMENT ================= */
+function emailKey(){return userEmail().replace(/[.#$\[\]@]/g,'_')}
+function updateDevlog(){
+const cur=DEVLOG[0];
+const vus=(D.devlogVus||{})['v'+cur.v]||{};
+const dejaVu=!!vus[emailKey()];
+const ovl=document.getElementById('ovlDev');
+if(!dejaVu&&D.etat&&(!FB_ON||firebase.auth().currentUser)){
+document.getElementById('devTitre').textContent='Quoi de neuf \u2014 v'+cur.v;
+document.getElementById('devCorps').innerHTML=
+'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">'+cur.date.split('-').reverse().join('/')+' \u00b7 '+cur.origine+'</div>'
++cur.ch.map(c=>'<div style="margin-bottom:5px">\u2022 '+c+'</div>').join('')
++(cur.cons.length?'<div style="font-weight:800;margin:12px 0 6px;color:var(--accent)">\u00c0 faire maintenant :</div>'+cur.cons.map(c=>'<div style="margin-bottom:5px">\u2611 '+c+'</div>').join(''):'');
+ovl.classList.add('show')}
+else ovl.classList.remove('show');
+const el=document.getElementById('devlogList');if(!el)return;
+el.innerHTML=DEVLOG.map(d=>{
+const vusD=(D.devlogVus||{})['v'+d.v]||{};
+const quiQuand=Object.entries(vusD).map(([e,ts])=>e.split('_')[0]+' le '+new Date(ts).toLocaleDateString('fr-FR')).join(' \u00b7 ');
+return`<details style="margin-bottom:8px"><summary style="font-size:13px;font-weight:800;cursor:pointer">v${d.v} \u00b7 ${d.date.split('-').reverse().join('/')}</summary>
+<div style="font-size:11px;font-weight:600;color:var(--text-dim);line-height:1.5;padding:6px 0 0 12px">
+<div style="color:var(--text-muted);margin-bottom:4px">Origine : ${d.origine}</div>
+${d.ch.map(c=>'<div>\u2022 '+c+'</div>').join('')}
+${d.cons.length?'<div style="margin-top:4px;color:var(--accent)">Consignes : '+d.cons.join(' \u00b7 ')+'</div>':''}
+${quiQuand?'<div style="margin-top:4px;color:var(--green)">Compris : '+quiQuand+'</div>':''}
+</div></details>`}).join('')}
+function devCompris(){
+write('devlogVus/v'+DEVLOG[0].v+'/'+emailKey(),Date.now());
+document.getElementById('ovlDev').classList.remove('show')}
 
 /* ================= ADMIN COMPTES ================= */
 function updateCptAdmin(){
@@ -1408,13 +1555,100 @@ const col=h.statut==='reussi'?'g':'rd';
 return`<div class="row"><div class="row-l">\u2264 ${fs(h.cibleMens)}/mois \u00d7 ${h.duree} mois</div><div class="row-v ${col}">${lbl}</div></div>`}).join('')}
 body.innerHTML=html}
 
+/* ================= RECHERCHE ================= */
+let rechMax=20;
+function lancerRecherche(){
+const q=document.getElementById('rechInp').value.trim();
+const el=document.getElementById('rechRes');
+if(q.length<2){el.innerHTML='';rechMax=20;return}
+const rq=new RegExp(q.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&'),'i');
+const hits=txReal().filter(t=>rq.test(t.lib)||rq.test(t.full||'')||rq.test(t.l||'')||rq.test((D.notes||{})[t._acc+'_'+t.k]||''));
+if(!hits.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Rien trouv\u00e9.</div>';return}
+const tot=hits.reduce((s,t)=>s+t.amt,0);
+const mois=new Set(hits.map(t=>t.date.slice(0,7))).size;
+const deb=hits.filter(t=>t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0);
+el.innerHTML=`<div style="font-size:12px;font-weight:700;margin-bottom:6px">${hits.length} op\u00e9ration(s) \u00b7 ${fs(deb)} d\u00e9pens\u00e9s sur ${mois} mois (${fs(deb/Math.max(1,mois))}/mois en moyenne)</div>`
++hits.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,rechMax).map(t=>ligneOp(t,{small:true,cpt:true})).join('')
++(hits.length>rechMax?`<div style="font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;padding:8px 0;text-align:center" onclick="rechMax+=30;lancerRecherche()">Voir plus (${hits.length-rechMax} restants)</div>`:'')}
+
+/* ================= RESTE-À-VIVRE + DÉTAIL D'UN MOIS ================= */
+function updateResteVivre(){
+const el=document.getElementById('resteVivre');if(!el)return;
+const now=new Date();const mk=curMonth();
+const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+const joursRestants=lastDay-now.getDate()+1;
+const dep=depOf(txMonth(mk));
+const reste=CIBLE-dep;
+if(reste>0)el.innerHTML=`Il reste <b>${fs(reste)}</b> pour ${joursRestants} jour${joursRestants>1?'s':''} = <b>${fs(reste/joursRestants)}/jour</b> pour tenir la cible.`;
+else el.innerHTML=`<span style="color:#fecaca">Enveloppe du mois d\u00e9pass\u00e9e de ${fs(-reste)}. Chaque euro non d\u00e9pens\u00e9 d'ici le ${lastDay} limite la casse.</span>`}
+const MOIS_FR=['janvier','f\u00e9vrier','mars','avril','mai','juin','juillet','ao\u00fbt','septembre','octobre','novembre','d\u00e9cembre'];
+function nomMois(mk){return MOIS_FR[+mk.slice(5,7)-1]+' '+mk.slice(0,4)}
+function openMois(mk){
+const l=txMonth(mk);if(!l.length)return;
+const dep=depOf(l),rev=revOf(l);
+const mkN1=(+mk.slice(0,4)-1)+mk.slice(4);
+const lN1=txMonth(mkN1);
+const cmp=lN1.length?`<div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:10px">M\u00eame mois l'an dernier (${nomMois(mkN1)}) : ${fs(depOf(lN1))} d\u00e9pens\u00e9s \u2014 ${dep<=depOf(lN1)?'<span style="color:var(--green)">'+fs(depOf(lN1)-dep)+' de moins cette ann\u00e9e \u2713</span>':'<span style="color:var(--red)">'+fs(dep-depOf(lN1))+' de plus cette ann\u00e9e</span>'}</div>`:'';
+const gr={};l.filter(t=>t.amt<0).forEach(t=>{const g=FAMN[t.c]||'Autres';if(!gr[g])gr[g]={s:0,txs:[]};gr[g].s+=Math.abs(t.amt);gr[g].txs.push(t)});
+document.getElementById('moisCorps').innerHTML=`
+<h2 style="margin-bottom:2px">${nomMois(mk)}${mk===curMonth()?' (en cours)':''}</h2>
+<div style="font-size:13px;font-weight:700;margin-bottom:8px">${fs(dep)} d\u00e9pens\u00e9s \u00b7 ${fs(rev)} re\u00e7us \u00b7 <span style="color:${rev-dep>=0?'var(--green)':'var(--red)'}">${rev-dep>=0?'+':''}${fs(rev-dep)}</span></div>
+${cmp}
+${Object.entries(gr).sort((a,b)=>b[1].s-a[1].s).map(([g,v])=>
+`<div style="font-size:12px;font-weight:800;margin:8px 0 2px">${g} \u2014 ${fs(v.s)}</div>`
++v.txs.sort((a,b)=>Math.abs(b.amt)-Math.abs(a.amt)).slice(0,5).map(t=>ligneOp(t,{small:true,cpt:true})).join('')
++(v.txs.length>5?'<div style="font-size:10px;color:var(--text-muted);font-weight:600;padding-left:4px">\u2026 et '+(v.txs.length-5)+' autres</div>':'')).join('')}`;
+document.getElementById('ovlMois').classList.add('show')}
+
+/* ================= NOMMAGE HUMAIN + FICHE OPÉRATION ================= */
+function libHumain(t){
+if(t.l&&t.l!=='Non class\u00e9')return{nom:t.l+(t.chq?' n\u00b0'+t.chq:''),sous:(t.lib||'').slice(0,44)};
+let n=(t.lib||'').replace(/^(CB|PRLV|VIR INST|VIR\.?|VIREMENT|CHEQUE|RETRAIT DAB|PAIEMENT)\s*/i,'')
+.replace(/FACT\s*\d+|\d{2}\/\d{2}\/?\d{0,4}|N\u00b0\s*\d+|\b\d{5,}\b/g,'').replace(/\s+/g,' ').trim();
+if(!n)n=t.lib||'Op\u00e9ration';
+n=n.charAt(0)+n.slice(1).toLowerCase();
+return{nom:n,sous:(t.lib||'').slice(0,44)}}
+function ligneOp(t,opts){
+const h=libHumain(t);const o=opts||{};
+return`<div class="row" style="cursor:pointer" onclick="openOp('${t._acc}','${t.k}')"><div class="row-l" style="font-size:${o.small?'11px':'12px'};line-height:1.35">${t.dd||t.date} \u00b7 <b>${h.nom}</b>${o.cpt?' <span style="font-weight:500;color:var(--text-muted)">\u00b7 '+((COMPTES[t._acc]||{}).lbl||'')+'</span>':''}<br><span style="font-weight:500;color:var(--text-muted);font-size:10px">${h.sous}</span></div><div class="row-v ${t.amt<0?'rd':'g'}" style="font-size:${o.small?'11px':'12px'}">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div></div>`}
+function findOp(acc,k){return(D.tx[acc]||{})[k]}
+function openOp(acc,k){
+const t=findOp(acc,k);if(!t)return;t._acc=acc;
+const h=libHumain(t);
+const note=(D.notes||{})[acc+'_'+k]||'';
+document.getElementById('opCorps').innerHTML=`
+<div style="font-size:17px;font-weight:800;margin-bottom:2px">${h.nom}</div>
+<div style="font-size:22px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${t.amt<0?'var(--red)':'var(--green)'};margin-bottom:8px">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div>
+<div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:10px">${new Date(t.date).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} \u00b7 compte ${(COMPTES[acc]||{}).lbl||acc}</div>
+<div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);background:var(--bg);border-radius:8px;padding:8px;margin-bottom:12px;word-break:break-all">${t.lib||''}${t.full?' \u2014 '+t.full:''}</div>
+<div class="fld"><label>Nom dicible (cr\u00e9e une r\u00e8gle pour toutes les op\u00e9rations semblables)</label><input type="text" id="opNom" value="${t.l==='Non class\u00e9'?'':(t.l||'').replace(/"/g,'&quot;')}" placeholder="${h.nom.replace(/"/g,'&quot;')}"></div>
+<div class="fld"><label>Cat\u00e9gorie</label><select class="inp" id="opCat">${[['courses','Courses'],['carburant','Carburant'],['sante','Sant\u00e9'],['trav','Travaux'],['abo','Abonnements'],['ext','Extras'],['fix','Charges fixes'],['vac','Vacances']].map(([v,l])=>`<option value="${v}"${t.c===v?' selected':''}>${l}</option>`).join('')}</select></div>
+<div class="fld"><label>Note (uniquement cette op\u00e9ration)</label><input type="text" id="opNote" value="${String(note).replace(/"/g,'&quot;')}" placeholder="ex. rembours\u00e9 par Bruno"></div>
+<button class="btn-engage" onclick="saveOp('${acc}','${k}')">Enregistrer</button>`;
+document.getElementById('ovlOp').classList.add('show')}
+function motifRegle(t){
+let m=(t.lib||'').replace(/FACT\s*\d+|\d{2}\/\d{2}\/?\d{0,4}|N\u00b0\s*\d+|\b\d{4,}\b/g,'').replace(/\s+/g,' ').trim();
+m=m.replace(/^(CB|PRLV|VIR INST|VIR\.?|VIREMENT)\s*/i,'').trim();
+return m.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&')}
+function saveOp(acc,k){
+const t=findOp(acc,k);if(!t)return;
+const nom=document.getElementById('opNom').value.trim();
+const cat=document.getElementById('opCat').value;
+const note=document.getElementById('opNote').value.trim();
+if(nom||cat!==t.c){
+const p=motifRegle(t);
+if(p.length>=3)write('config/reglesPerso/r'+Date.now(),{p,c:cat,l:nom||libHumain(t).nom})}
+if(note)write('notes/'+acc+'_'+k,note);
+else if((D.notes||{})[acc+'_'+k])write('notes/'+acc+'_'+k,null);
+document.getElementById('ovlOp').classList.remove('show')}
+
 /* ================= AIDE ⓘ ================= */
 const INFOS={
 proj:"<b>Projection fin de mois.</b> L'appli devine où finira LE MOIS EN COURS : ce que tu as déjà dépensé + ton rythme de vie courante pour les jours restants + les charges fixes à venir. Un gros achat déjà fait compte en entier, mais n'est pas multiplié sur les jours restants — et l'appli ne suppose pas qu'un gros achat va arriver : elle projette le mois tel qu'il se dessine. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement. Clignotant : très grave. Fiable à partir du 5 du mois.",
 traj:"<b>Trajectoire d'épargne.</b> Épargne = la somme de tous vos comptes. Le rythme, c'est ce que vous mettez VRAIMENT de côté chaque mois. Il se calcule en deux morceaux. 1 — La vie courante : entrées moins sorties, en moyenne sur les 3 derniers mois. Une grosse dépense ponctuelle (plus de 250 €) n'y est pas comptée : la montre d'octobre ne veut pas dire que chaque mois coûte une montre. 2 — Mais les gros achats reviennent toujours. L'appli regarde combien ils coûtent par mois en moyenne sur 1 an, et retire ce montant du rythme. Pareil côté entrées : un don ou une assurance ne compte pas, seuls les revenus qui tombent tous les mois comptent. Un achat remboursé (payé puis rendu) ne compte nulle part : il ne s'est rien passé. Résultat : un rythme stable, honnête, qui ne panique pas au moindre achat et qui n'oublie rien.",
-env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa case, d'après le libellé bancaire. La barre se remplit au fil du mois. Vert : ok. Orange : proche du plafond. Rouge : dépassé. Pour changer un plafond : onglet Règles, verrou intelligent.",
+env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa case, remise à zéro le 1er. Touche une enveloppe : ses opérations du mois s'affichent. Santé et Travaux sont CUMULABLES : ce qui n'est pas dépensé s'ajoute à une réserve (affichée en vert), calculée sur les 12 derniers mois — un gros mois de dentiste se paie avec les mois calmes d'avant.",
 rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne. Les virements entre vos comptes ne comptent pas : ce n'est pas un revenu.",
-dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Le total passe en rouge s'il dépasse la cible.",
+dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Touche une famille : ses opérations. Touche une opération : sa fiche — renommer, changer de catégorie, poser une note. Un seul geste partout : tout s'ouvre.",
 cpt:"<b>Comptes.</b> Solde affiché = solde saisi au départ + toutes les opérations importées depuis. Si un solde est faux, il manque des opérations : réimporte un CSV qui couvre la période manquante.",
 lastimp:"<b>Dernier import.</b> Le délai de chaque compte, un par un. L'appli ne voit que ce qu'on lui donne : un import par semaine et par personne. Au-delà de 7 jours sur un compte courant, l'appli SE VERROUILLE : plus de consultation tant que les relevés ne sont pas à jour — des chiffres faux valent pire que rien. L'épargne, peu active, a 35 jours.",
 impzone:"<b>Import CSV.</b> Trois chemins. 1 — Le plus simple : depuis l'appli bancaire, exporte le CSV (elle propose d'office « depuis le dernier export ») puis Partager → Budget : l'import se fait tout seul, ici. 2 — Cette zone : choisis les fichiers téléchargés, plusieurs à la fois. 3 — Le CSV PayPal, par l'un ou l'autre chemin : il sert à voir à travers les lignes PayPal, sans compter double. Après chaque import, le détail complet s'affiche : chaque opération qui entre, sa raison, son montant. Ce qui est déjà connu est ignoré.",
@@ -1425,11 +1659,13 @@ cheques:"<b>Chèques — talon numérique.</b> Chaque chèque débité est repé
 fiab:"<b>Fiabilité des données.</b> L'appli se surveille elle-même. En tête : les anomalies qu'elle détecte toute seule (mouvement familial pris pour une dépense, écart de solde, trou dans les imports, chèques anonymes, débits inconnus). Quand il y en a, un bouton exporte tout en JSON : envoie ce fichier à Claude, il trouve la cause et corrige. En dessous, les trois contrôles permanents : les soldes (touche Vérifier, saisis le solde exact de la banque, l'écart s'affiche), les zones grises, et les débits non classés.",
 imphisto:"<b>Historique des imports.</b> Qui a importé quoi, quand, et combien d'opérations nouvelles. La mémoire du rituel du samedi.",
 notifhisto:"<b>Historique des notifications.</b> Tout ce que le serveur a envoyé, avec le texte exact. Une notification ratée sur le téléphone se retrouve ici.",
-export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
+export:"<b>Échange avec Claude.</b> Le circuit d'analyse : 1 — Copie le prompt (bouton). 2 — Exporte le JSON (bouton du dessous ou celui des anomalies). 3 — Colle les deux dans une conversation avec Claude : il analyse, nomme l'obscur, signale les incohérences, et rend un petit fichier JSON. 4 — Importe ce fichier ici comme un relevé (ou partage-le à l'app) : après confirmation, il ne peut toucher QUE les nommages, les chèques et les notes — jamais les transactions ni les cibles.",
 envies:"<b>Récompenses.</b> Coche une envie : le budget extras restant se recalcule. Valide : ça devient un engagement. Au prochain import, l'appli cherche la dépense et dit si tu as tenu le montant prévu (marge de 15 %). Le plaisir prévu et chiffré, pas le plaisir subi.",
-chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. La ligne pointillée, c'est la cible.",
+recherche:"<b>Rechercher.</b> Tape un nom (magasin, personne, chèque…) : toutes les opérations correspondantes, avec le total dépensé et la moyenne par mois. La recherche fouille aussi les notes que vous posez sur les opérations. Chaque résultat s'ouvre d'un tap.",
+chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. Gris : le mois en cours, incomplet donc pas encore jugeable. Pointillé : la cible. TOUCHE UNE BARRE : le mois s'ouvre — familles, plus grosses opérations, et la comparaison au même mois de l'an dernier.",
 chep:"<b>Épargne.</b> Ligne pleine : le passé, mois par mois. Deux pointillés pour l'avenir : ton rythme réel actuel (vert si ça monte, rouge si ça fond), et en petits points verts ce que donnerait la cible tenue (+900 €/mois). L'écart entre les deux, c'est l'enjeu.",
 score:"<b>Score /20.</b> On part de 20 et on enlève des points. Mois au-dessus de la cible : jusqu'à −8. Import en retard : −2 à −4. Mois précédent qui a mangé l'épargne : −5. Découvert : −3. Le score se recalcule à chaque import.",
+devlog:"<b>Journal de développement.</b> Toute la vie de l'appli, version par version : d'où vient chaque décision, ce qui a changé, les consignes données, et qui a dit Compris, quand. À chaque nouvelle version, le panneau Quoi de neuf s'affiche une fois : lis, fais ce qu'il y a à faire, touche Compris — c'est archivé ici. Pour remonter l'origine d'un choix ou d'un débogage, c'est la mémoire du chantier.",
 cibles:"<b>Cibles en vigueur.</b> Les chiffres que toute l'appli utilise en ce moment. Ils vivent dans Firebase, pas dans le code. Pour les changer : le verrou ci-dessous. Tout changement est noté au journal.",
 pending:"<b>Demandes en cours.</b> Chaque demande d'assouplissement s'affiche ici, chez vous deux, avec un compte à rebours de 72 h. Trois sorties : tu annules (tout de suite, toujours possible) · l'autre approuve depuis son téléphone (tout de suite) · le délai passe ET tu confirmes. Si tu ne reviens pas confirmer, rien ne change.",
 verrou:"<b>Verrou intelligent.</b> DURCIR une cible (dépenser moins, épargner plus) : tout de suite. L'ADOUCIR (dépenser plus, épargner moins) : 72 h d'attente + confirmation, ou l'accord de l'autre. On n'approuve jamais sa propre demande. Tout est noté au journal, avec le nom et la date.",
@@ -1483,7 +1719,7 @@ else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 updateBlocage();consommerPartage();
 const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
-buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();
+buildAccSel();updateProjection();updateResteVivre();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();updateCfgSpans();updateDevlog();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
 const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
@@ -1506,6 +1742,7 @@ if(caches)for(const k of await caches.keys())await caches.delete(k)}catch(e){}
 location.reload()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 setTimeout(checkVersion,800);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion()});
 setTimeout(saluerInstallation,1500);
 setTimeout(()=>{try{if(FB_ON&&Notification.permission==='granted'&&localStorage.getItem('fcmTok')){firebase.messaging().onMessage(p=>{const n=(p&&p.notification)||{};notifLocale(n.title||'Budget Meney',n.body||'')})}}catch(e){}},2000);
 boot();
