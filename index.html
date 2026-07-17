@@ -973,6 +973,23 @@ const qui=e.par==='local'?'':((e.par===userEmail()?'toi':e.par)+' · ');
 return`<div class="row"><div class="row-l">${lbl}<br><span style="font-weight:500;color:var(--text-muted);font-size:11px">${qui}${new Date(e.ts).toLocaleDateString('fr-FR')} · ${e.type}</span></div><div class="row-v ${durci?'g':'o'}">${fs(e.ov)} → ${fs(e.nv)}</div></div>`}).join('')}
 
 /* ================= NOTIFICATIONS FCM ================= */
+async function notifLocale(titre,corps){
+if(!('Notification'in window)||Notification.permission!=='granted')return false;
+try{const reg=await navigator.serviceWorker.ready;
+await reg.showNotification(titre,{body:corps,icon:'icon-192.png',badge:'icon-192.png'});return true}
+catch(e){try{new Notification(titre,{body:corps,icon:'icon-192.png'});return true}catch(e2){return false}}}
+/* Salutation d'installation : à chaque installation ou réinstallation (localStorage vierge) */
+function saluerInstallation(){
+if(localStorage.getItem('installGreeted'))return;
+const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(!standalone)return;
+localStorage.setItem('installGreeted','1');
+notifLocale('\u2705 Budget Meney install\u00e9','L\u2019app est en place sur cet appareil. Pense \u00e0 activer les notifications (onglet Comptes) pour recevoir la projection chaque matin.').then(ok=>{
+if(!ok)localStorage.setItem('pendingGreet','1')})}
+window.addEventListener('appinstalled',()=>{
+localStorage.setItem('installGreeted','1');
+notifLocale('\u2705 Budget Meney install\u00e9','Ic\u00f4ne pos\u00e9e sur l\u2019\u00e9cran d\u2019accueil. Active les notifications (onglet Comptes) pour la projection du matin.').then(ok=>{
+if(!ok)localStorage.setItem('pendingGreet','1')})});
 const VAPID_KEY="BLra4Sn5vZsc2Z0-46r9a2K40Cxq9Liu0Tdl1e_2sf-8o-yua5lqcEVueENXmLhJf-BOFK2zQPt3TeXNKRmo1cg";
 function tokId(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return't'+h.toString(36)}
 async function activerNotifs(){
@@ -988,7 +1005,8 @@ const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistrati
 if(!token){alert('Impossible d\u2019obtenir le jeton. R\u00e9essaie.');return}
 write('fcmTokens/'+tokId(token),{token,email:userEmail(),ua:navigator.userAgent.slice(0,80),ts:Date.now()});
 localStorage.setItem('fcmTok',tokId(token));
-new Notification('Budget Meney',{body:'Notifications activ\u00e9es sur cet appareil. Le serveur enverra la premi\u00e8re demain matin.',icon:'icon-192.png'});
+const pend=localStorage.getItem('pendingGreet');localStorage.removeItem('pendingGreet');
+await notifLocale(pend?'\u2705 Budget Meney install\u00e9 et notifications activ\u00e9es':'\ud83d\udd14 Notifications activ\u00e9es',pend?'Tout est en place sur cet appareil. Premi\u00e8re notification serveur demain matin entre 7h et 9h.':'Cet appareil recevra la projection chaque matin entre 7h et 9h.');
 updateNotifs()}catch(e){alert('Erreur : '+e.message)}}
 function updateNotifs(){
 const st=document.getElementById('notifStatus');const dv=document.getElementById('notifDevices');
@@ -1184,7 +1202,7 @@ lastimp:"<b>Dernier import.</b> L'appli ne voit que ce que tu lui donnes. Un imp
 impzone:"<b>Import CSV.</b> Deux types de fichiers. 1. Les CSV Caisse d'Épargne (Opérations, puis Télécharger) : l'appli reconnaît chaque compte par le numéro dans le nom du fichier. 2. Le CSV PayPal (paypal.com : Activité, puis Télécharger) : il sert à voir À TRAVERS les lignes 'PayPal' de la banque — abonnements cachés, doublons. Il ne compte pas deux fois : c'est de l'analyse, pas des dépenses en plus. Tu peux tout donner d'un coup. Ce qui est déjà connu est ignoré.",
 impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte toute seule. Choisis un compte à la main seulement si le fichier a été renommé.",
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
-notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
+notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
 export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
 envies:"<b>Récompenses.</b> Coche une envie : le budget extras restant se recalcule. Valide : ça devient un engagement. Au prochain import, l'appli cherche la dépense et dit si tu as tenu le montant prévu (marge de 15 %). Le plaisir prévu et chiffré, pas le plaisir subi.",
 chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. La ligne pointillée, c'est la cible.",
@@ -1243,6 +1261,7 @@ document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr
 buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+setTimeout(saluerInstallation,1500);
 boot();
 </script>
 </body>
