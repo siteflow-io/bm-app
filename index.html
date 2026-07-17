@@ -396,7 +396,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=9; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=10; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -1115,6 +1115,8 @@ try{messaging.onMessage(p=>{const n=(p&&p.notification)||{};notifLocale(n.title|
 const pend=localStorage.getItem('pendingGreet');localStorage.removeItem('pendingGreet');
 await notifLocale(pend?'\u2705 Budget Meney install\u00e9 et notifications activ\u00e9es':'\ud83d\udd14 Notifications activ\u00e9es',pend?'Tout est en place sur cet appareil. Premi\u00e8re notification serveur demain matin entre 7h et 9h.':'Cet appareil recevra la projection chaque matin entre 7h et 9h.');
 updateNotifs()}catch(e){alert('Erreur : '+e.message)}}
+function retirerAppareil(id){
+if(confirm('Retirer cet appareil ? Il ne recevra plus de notifications.'))write('fcmTokens/'+id,null)}
 function updateNotifs(){
 const st=document.getElementById('notifStatus');const dv=document.getElementById('notifDevices');
 if(!st)return;
@@ -1123,7 +1125,7 @@ const mine=localStorage.getItem('fcmTok');
 const actif=mine&&toks.some(([id])=>id===mine)&&Notification.permission==='granted';
 st.textContent=actif?'Activ\u00e9es sur cet appareil \u2713':'Pas encore activ\u00e9es sur cet appareil.';
 document.getElementById('btnNotif').style.display=actif?'none':'block';
-dv.innerHTML=toks.map(([id,t])=>`<div class="row"><div class="row-l">${t.email===userEmail()?'Toi':t.email}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${/Android/i.test(t.ua)?'Android':/iPhone|iPad/i.test(t.ua)?'iPhone':'PC'} \u00b7 ${new Date(t.ts).toLocaleDateString('fr-FR')}</span></div><div class="row-v" style="cursor:pointer;color:var(--red)" onclick="if(confirm('Retirer cet appareil ?'))write('fcmTokens/${id}',null)">\u2715</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun appareil enregistr\u00e9.</div>'}
+dv.innerHTML=toks.map(([id,t])=>`<div class="row"><div class="row-l">${t.email===userEmail()?'Toi':t.email}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${/Android/i.test(t.ua)?'Android':/iPhone|iPad/i.test(t.ua)?'iPhone':'PC'} \u00b7 ${new Date(t.ts).toLocaleDateString('fr-FR')}</span></div><div class="row-v" style="cursor:pointer;color:var(--red)" onclick=\"retirerAppareil('${id}')\">\u2715</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun appareil enregistr\u00e9.</div>'}
 
 /* ================= CHÈQUES / FIABILITÉ / HISTORIQUES ================= */
 function updateCheques(){
