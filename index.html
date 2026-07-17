@@ -237,6 +237,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 </div>
 </div>
 <div class="last-imp">Dernier import : <span id="lastImp">aucun</span><span class="tip-i" data-i="lastimp">i</span></div>
+<div class="last-imp" id="verLine" style="cursor:pointer" onclick="majVersion()"><span id="verDot" style="font-size:13px;vertical-align:middle">\u25cf</span> <span id="verTxt">V\u00e9rification de version\u2026</span><span class="tip-i" data-i="version">i</span></div>
 </div>
 </div>
 
@@ -375,6 +376,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
+const APP_VERSION=1; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -1219,6 +1221,7 @@ simponct:"<b>Événement ponctuel.</b> Un achat (montant négatif) ou une rentr�
 simres:"<b>Résultat.</b> Deux courbes : sans l'effort, avec l'effort — sur la même base (celle que tu as choisie au-dessus). Le texte donne le gain de l'effort ET l'épargne au bout : les deux, toujours, pour que le texte et la courbe racontent la même histoire. Les paliers montrent leur date avant/après. Sauvegarde le scénario pour en parler avec Claire, ou engage-toi dessus.",
 simobj:"<b>Objectif inversé.</b> Tu dis combien tu veux dégager EN PLUS, et en combien de mois. L'appli répond : l'épargne mensuelle qu'il faut, le plafond de dépenses que ça impose, et surtout la comparaison qui compte : est-ce que tenir la cible normale suffit, ou faut-il faire plus ? Ton rythme réel est rappelé en dessous, pour information.",
 simscen:"<b>Scénarios sauvegardés.</b> Nomme un scénario et garde-le : il est partagé, Claire le voit sur son téléphone. C'est fait pour décider ensemble AVANT de dépenser. ▶ recharge le scénario, ✕ le supprime.",
+version:"<b>Version de l'app.</b> Le point compare la version qui tourne sur cet appareil avec la dernière poussée sur GitHub. Vert : à jour. Orange : 1 push de retard. Rouge : plusieurs. Toucher la ligne force la mise à jour (vide le cache et recharge). Si le point reste rouge après ça, ferme complètement l'app et rouvre-la — un onglet resté ouvert bloque la mise à jour.",
 setup:"<b>Soldes de départ.</b> Le point zéro de tout. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME. Un solde faux = toutes les projections fausses d'autant.",
 login:"<b>Connexion.</b> Seuls vos deux emails ont accès. Les comptes sont créés dans la console Firebase. C'est aussi cette identité qui sert au verrou : l'appli sait qui demande et qui approuve."
 };
@@ -1260,7 +1263,23 @@ else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
+async function checkVersion(){
+const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
+try{
+const r=await fetch('index.html',{cache:'no-store'});
+const m=(await r.text()).match(/APP_VERSION=(\d+)/);
+if(!m){dot.style.color='var(--text-muted)';txt.textContent='Version en ligne inconnue';return}
+const remote=+m[1],diff=remote-APP_VERSION;
+if(diff<=0){dot.style.color='var(--green)';txt.textContent='App \u00e0 jour (v'+APP_VERSION+')'}
+else if(diff===1){dot.style.color='var(--orange)';txt.textContent='1 push de retard \u2014 touche ici pour mettre \u00e0 jour'}
+else{dot.style.color='var(--red)';txt.textContent='En retard de '+diff+' push \u2014 touche ici pour mettre \u00e0 jour'}}
+catch(e){dot.style.color='var(--text-muted)';txt.textContent='Version non v\u00e9rifi\u00e9e (hors ligne ?)'}}
+async function majVersion(){
+try{const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)await r.update();
+if(caches)for(const k of await caches.keys())await caches.delete(k)}catch(e){}
+location.reload()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+setTimeout(checkVersion,800);
 setTimeout(saluerInstallation,1500);
 boot();
 </script>
