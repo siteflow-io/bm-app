@@ -248,6 +248,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="row"><div class="row-l">Pas de découvert</div><div class="row-v" id="sc4">--</div></div>
 </div>
 </div>
+<div class="alert warn" id="anomB" style="display:none;cursor:pointer" onclick="document.querySelector('.nav-tab[data-p=\u0022pComptes\u0022]').click()"></div>
 <div class="last-imp">Dernier import : <span id="lastImp">aucun</span><span class="tip-i" data-i="lastimp">i</span></div>
 <div class="last-imp" id="verLine" style="cursor:pointer" onclick="majVersion()"><span id="verDot" style="font-size:13px;vertical-align:middle">●</span> <span id="verTxt">Vérification de version…</span><span class="tip-i" data-i="version">i</span></div>
 </div>
@@ -395,7 +396,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=7; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=8; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -638,7 +639,9 @@ write('meta/lastImp/'+acc,new Date().toISOString());
 const dts=tx.map(t=>t.date).sort();
 write('importLog/i'+Date.now()+Math.random().toString(36).slice(2,5),{acc,nb:nouv.length,lues:tx.length,min:dts[0],max:dts[dts.length-1],par:userEmail(),ts:Date.now()});
 matchEngagements(tx);
-let h=`<div style="font-size:12px;font-weight:800;margin:8px 0 2px">${COMPTES[acc].lbl} \u2014 ${nouv.length} nouvelle(s) / ${tx.length} lues</div>`;
+let h;
+if(!nouv.length)h=`<div style="font-size:12px;font-weight:700;margin:8px 0 2px">${COMPTES[acc].lbl} : rien de nouveau \u2014 les ${tx.length} op\u00e9ration(s) de ce fichier \u00e9taient d\u00e9j\u00e0 dans l\u2019appli (p\u00e9riode ${dts[0].split('-').reverse().join('/')} \u2192 ${dts[dts.length-1].split('-').reverse().join('/')}).</div>`;
+else h=`<div style="font-size:12px;font-weight:800;margin:8px 0 2px">${COMPTES[acc].lbl} : ${nouv.length} op\u00e9ration(s) entrent dans l\u2019appli${tx.length>nouv.length?' (les '+(tx.length-nouv.length)+' autres \u00e9taient d\u00e9j\u00e0 connues)':''} :</div>`;
 if(nouv.length){
 const gr={};nouv.forEach(t=>{const g=FAMN[t.amt>0?'rev':t.c]||'Autres';gr[g]=(gr[g]||0)+1});
 h+=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">${Object.entries(gr).map(([g,n])=>g+' +'+n).join(' \u00b7 ')}</div>`;
@@ -936,6 +939,12 @@ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
 document.querySelector('.nav-tab[data-p="pComptes"]').classList.add('active');
 document.getElementById('pComptes').classList.add('active');
 document.getElementById('ovlBloc').classList.remove('show')}
+function updateAnomAlert(){
+let el=document.getElementById('anomB');
+if(!el)return;
+const graves=detecterAnomalies().filter(a=>a.grave);
+el.style.display=graves.length?'block':'none';
+if(graves.length)el.innerHTML='\u26a0 '+graves.length+' anomalie(s) dans les donn\u00e9es \u2014 voir Comptes \u203a Fiabilit\u00e9';}
 function updateAlertImport(){
 const el=document.getElementById('alertB');
 const li=(D.meta&&D.meta.lastImp)||{};
@@ -1139,9 +1148,43 @@ const reel=parseFloat(prompt('Solde r\u00e9el du compte '+((COMPTES[acc]||{}).lb
 if(isNaN(reel))return;
 const calc=soldeCompte(acc);
 write('controles/'+acc,{reel,calc:Math.round(calc*100)/100,ecart:Math.round((reel-calc)*100)/100,ts:Date.now()})}
+function detecterAnomalies(){
+const an=[];
+/* 1. Mouvements familiaux non appari\u00e9s (devraient \u00eatre des virements internes) */
+const INT_TEST=/MENEY|COLLIGNON|MADELEINE/i;
+const suspects=txReal().filter(t=>Math.abs(t.amt)>=50&&(INT_TEST.test(t.lib)||INT_TEST.test(t.full||''))&&!/CHEQUE/i.test(t.lib));
+if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom de la famille non reconnu(s) comme virement interne \u2014 risque de fausses d\u00e9penses/faux revenus ('+suspects.slice(0,3).map(t=>t.dd+' '+fs(Math.abs(t.amt))).join(', ')+')'});
+/* 2. \u00c9carts de solde contr\u00f4l\u00e9s */
+for(const[id,c]of comptesTries()){const ct=(D.controles||{})[id];
+if(ct&&Math.abs(ct.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ct.ecart)+' sur '+c.lbl+' au dernier contr\u00f4le \u2014 des op\u00e9rations manquent probablement'})}
+/* 3. Zones grises */
+const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+let nbGaps=0;
+for(const[id,c]of comptesTries()){if(c.type!=='courant')continue;
+const dts=[...new Set(ALL.filter(t=>t._acc===id&&t.date>=cutoff).map(t=>t.date))].sort();
+for(let i=1;i<dts.length;i++)if((new Date(dts[i])-new Date(dts[i-1]))/864e5>10)nbGaps++}
+if(nbGaps)an.push({grave:false,txt:nbGaps+' p\u00e9riode(s) sans aucune op\u00e9ration \u2014 imports \u00e0 v\u00e9rifier (d\u00e9tail ci-dessous)'});
+/* 4. Non class\u00e9s significatifs */
+const c6=new Date(Date.now()-183*864e5).toISOString().slice(0,10);
+const ncTot=txReal().filter(t=>t.amt<0&&t.l==='Non class\u00e9'&&t.date>=c6).reduce((s,t)=>s+Math.abs(t.amt),0);
+if(ncTot>=300)an.push({grave:false,txt:fs(ncTot)+' de d\u00e9bits non class\u00e9s sur 6 mois \u2014 r\u00e8gles \u00e0 cr\u00e9er'});
+/* 5. Ch\u00e8ques anonymes */
+const chAno=ALL.filter(t=>t.chq&&t.amt<0&&!((D.cheques||{})[t._acc+'_'+t.chq]||{}).benef).length;
+if(chAno>=3)an.push({grave:false,txt:chAno+' ch\u00e8ques sans b\u00e9n\u00e9ficiaire \u2014 talon num\u00e9rique \u00e0 remplir'});
+return an}
 function updateFiab(){
 const el=document.getElementById('fiabBody');if(!el)return;
-let h='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px">Contr\u00f4le des soldes (banque vs appli) :</div>';
+const an=detecterAnomalies();
+let h='';
+if(an.length){
+const graves=an.filter(a=>a.grave).length;
+h+=`<div style="background:${graves?'#fef2f2':'var(--orange-bg)'};border:1px solid ${graves?'#fecaca':'#fcd34d'};border-radius:10px;padding:12px;margin-bottom:12px">
+<div style="font-size:12px;font-weight:800;color:${graves?'#991b1b':'#92400e'};margin-bottom:6px">\u26a0 L\u2019appli a d\u00e9tect\u00e9 ${an.length} chose(s) \u00e0 v\u00e9rifier :</div>
+${an.map(a=>`<div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:4px">\u2022 ${a.txt}</div>`).join('')}
+<button class="btn-engage" style="margin-top:8px;padding:10px" onclick="exportJson()">Exporter le JSON et l\u2019envoyer \u00e0 Claude</button>
+</div>`}
+else h+='<div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:10px">\u2713 Aucune anomalie d\u00e9tect\u00e9e dans les donn\u00e9es.</div>';
+h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px">Contr\u00f4le des soldes (banque vs appli) :</div>';
 h+=comptesTries().map(([id,c])=>{
 const ct=(D.controles||{})[id];
 let v='<span style="color:var(--text-muted)">jamais contr\u00f4l\u00e9</span>';
@@ -1369,7 +1412,7 @@ impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte t
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
 notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
 cheques:"<b>Chèques — talon numérique.</b> Chaque chèque débité est repéré par son numéro et son chéquier (le compte d'où il part : Paul, Claire, Commun). Un chèque non nommé apparaît en orange : indique le bénéficiaire ou l'objet, choisis la bonne catégorie, valide. Dès qu'il est nommé, il prend ce nom partout dans l'appli et rejoint la bonne enveloppe. C'est le talon de chéquier, en mieux : il ne se perd pas, et vous le voyez tous les deux.",
-fiab:"<b>Fiabilité des données.</b> Trois contrôles. 1 — Les soldes : touche Vérifier, saisis le solde exact de l'espace bancaire, l'appli affiche l'écart avec son propre calcul. Écart proche de zéro = imports complets. Gros écart = il manque des opérations quelque part. 2 — Les zones grises : des périodes sans aucune opération sur un compte courant, signe probable d'un trou dans les imports. 3 — Les débits obscurs : ce que l'appli ne sait pas classer. Envoie cette liste à Claude, il crée les règles, et l'obscur disparaît.",
+fiab:"<b>Fiabilité des données.</b> L'appli se surveille elle-même. En tête : les anomalies qu'elle détecte toute seule (mouvement familial pris pour une dépense, écart de solde, trou dans les imports, chèques anonymes, débits inconnus). Quand il y en a, un bouton exporte tout en JSON : envoie ce fichier à Claude, il trouve la cause et corrige. En dessous, les trois contrôles permanents : les soldes (touche Vérifier, saisis le solde exact de la banque, l'écart s'affiche), les zones grises, et les débits non classés.",
 imphisto:"<b>Historique des imports.</b> Qui a importé quoi, quand, et combien d'opérations nouvelles. La mémoire du rituel du samedi.",
 notifhisto:"<b>Historique des notifications.</b> Tout ce que le serveur a envoyé, avec le texte exact. Une notification ratée sur le téléphone se retrouve ici.",
 export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
@@ -1430,7 +1473,7 @@ else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 updateBlocage();consommerPartage();
 const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
-buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();
+buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
 const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
