@@ -209,6 +209,14 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
 </div></div>
 
+<!-- BLOCAGE IMPORT -->
+<div class="ovl" id="ovlBloc" style="z-index:180"><div class="ovl-box" style="padding-top:12vh;text-align:center">
+<div style="font-size:44px;margin-bottom:10px">⛔</div>
+<h2>Relevés périmés</h2>
+<p class="sub" id="blocTxt" style="margin-bottom:8px"></p>
+<p style="font-size:13px;font-weight:600;color:var(--text-dim);line-height:1.55;margin-bottom:18px">Les chiffres affichés seraient faux, et des chiffres faux valent pire que rien. Règle de la maison : les comptes courants s'importent au moins de samedi en samedi. Deux minutes, et tout se rouvre.</p>
+<button class="btn-engage" onclick="allerImporter()">Importer les relevés maintenant</button>
+</div></div>
 <!-- SUIVI -->
 <div class="page active" id="pSuivi">
 <div class="hdr"><h1>Budget Meney</h1><p id="curDate"></p></div>
@@ -237,7 +245,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 </div>
 </div>
 <div class="last-imp">Dernier import : <span id="lastImp">aucun</span><span class="tip-i" data-i="lastimp">i</span></div>
-<div class="last-imp" id="verLine" style="cursor:pointer" onclick="majVersion()"><span id="verDot" style="font-size:13px;vertical-align:middle">\u25cf</span> <span id="verTxt">V\u00e9rification de version\u2026</span><span class="tip-i" data-i="version">i</span></div>
+<div class="last-imp" id="verLine" style="cursor:pointer" onclick="majVersion()"><span id="verDot" style="font-size:13px;vertical-align:middle">●</span> <span id="verTxt">Vérification de version…</span><span class="tip-i" data-i="version">i</span></div>
 </div>
 </div>
 
@@ -353,6 +361,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="rule-block"><div class="rule-cat">📱 Abonnements — 80 €/mois</div><div class="rule-desc">Tout le numérique qui se prélève chaque mois. Les doublons remontent dans Optimisations.</div></div>
 <div class="rule-block"><div class="rule-cat">💎 Extras — 300 €/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire : restos, spa, coiffeur, shopping, sorties, tabac, retraits, PayPal…</div></div>
 <div class="rule-block"><div class="rule-cat">🐷 Épargne — 900 €/mois</div><div class="rule-desc">L'objectif. Chaque euro non dépensé est un euro de côté. L'appli affiche la date de chaque palier à TON rythme réel.</div></div>
+<div class="rule-block"><div class="rule-cat">⛔ Blocage du samedi</div><div class="rule-desc">Chaque compte courant doit être importé au moins une fois par semaine. Au-delà de 7 jours, l'appli se verrouille : importer avant de consulter. On ne regarde jamais des chiffres faux.</div></div>
+<div class="rule-block"><div class="rule-cat">🔄 Comment les pronostics évoluent</div><div class="rule-desc">La simulation imagine : elle ne change rien. Le défi promet : il ne change rien non plus, il sera jugé. Une optimisation cochée compte tout de suite — c'est un acte fait, et l'appli vérifie qu'il le reste. La seule chose qui fait bouger les pronostics : LES IMPORTS. Un mois tenu, importé, remonte le rythme d'environ un tiers ; trois mois tenus, plein effet ; la provision gros achats se dégonfle en un an de sobriété. L'appli ne croit que les relevés.</div></div>
 <div class="rule-block"><div class="rule-cat">⚖️ Le principe</div><div class="rule-desc">L'appli t'alerte quand il est encore temps d'agir — pas le 31. Les cibles changent par le verrou : durcir = tout de suite, adoucir = 72 h ou l'accord de l'autre. Tout est noté au journal.</div></div>
 </div>
 
@@ -376,7 +386,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=1; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=3; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -855,14 +865,41 @@ const htmlStat=keys.map(k=>{const a=acts[k];
 return`<div class="act-i"><div class="act-ck ${a.d?'done':''}" onclick="togA('${k}')">${a.d?'✓':''}</div><div><div class="act-txt">${a.t}</div><div class="act-w">${a.w}</div></div></div>`}).join('');
 document.getElementById('actL').innerHTML=htmlOpt+htmlStat}
 function togA(k){const a=D.actions[k];write('actions/'+k,Object.assign({},a,{d:!a.d}))}
+function retardMaxCourant(){
+const li=(D.meta&&D.meta.lastImp)||{};
+if(!Object.keys(li).length)return 999;
+let mx=0;
+for(const[id,c]of comptesTries()){
+if(c.type!=='courant')continue;
+mx=Math.max(mx,li[id]?Math.floor((Date.now()-new Date(li[id]))/864e5):999)}
+return mx}
+function updateBlocage(){
+const ovl=document.getElementById('ovlBloc');
+const retard=retardMaxCourant();
+const pageActive=document.querySelector('.page.active');
+const surComptes=pageActive&&pageActive.id==='pComptes';
+const bloque=retard>7&&D.etat&&!surComptes;
+ovl.classList.toggle('show',!!bloque);
+if(bloque)document.getElementById('blocTxt').textContent=retard>=999?'Aucun import de relev\u00e9s.':retard+' jours sans import complet des comptes courants.'}
+function allerImporter(){
+document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+document.querySelector('.nav-tab[data-p="pComptes"]').classList.add('active');
+document.getElementById('pComptes').classList.add('active');
+document.getElementById('ovlBloc').classList.remove('show')}
 function updateAlertImport(){
 const el=document.getElementById('alertB');
-const stamps=Object.values(D.meta&&D.meta.lastImp||{});
-const last=stamps.length?Math.max(...stamps.map(s=>+new Date(s))):null;
-if(!last){el.className='alert danger';el.textContent='Aucun import. L\u2019appli ne voit rien — et toi non plus.';
+const li=(D.meta&&D.meta.lastImp)||{};
+if(!Object.keys(li).length){el.className='alert danger';el.textContent='Aucun import. L\u2019appli ne voit rien — et toi non plus.';
 document.getElementById('lastImp').textContent='aucun';return}
-const days=(Date.now()-last)/864e5;
-document.getElementById('lastImp').textContent=new Date(last).toLocaleDateString('fr-FR')+' ('+Math.floor(days)+' j)';
+/* d\u00e9lai par compte ; l'alerte suit le compte COURANT le plus en retard */
+const dj=s=>Math.floor((Date.now()-new Date(s))/864e5);
+const parts=comptesTries().map(([id,c])=>{
+const d=li[id]!==undefined?dj(li[id]):null;
+const late=d===null||(c.type==='courant'?d>7:d>35);
+return{lbl:c.lbl.split(' ')[0],d,late,courant:c.type==='courant'}});
+document.getElementById('lastImp').innerHTML=parts.map(p=>`${p.lbl} ${p.d===null?'jamais':p.d+' j'}${p.late?' \u26a0':''}`).join(' \u00b7 ');
+const days=Math.max(...parts.filter(p=>p.courant).map(p=>p.d===null?999:p.d));
 if(days>14){el.className='alert over';el.textContent=`${Math.floor(days)} jours sans import. C\u2019est comme ça que 54 000 € ont disparu sans que personne ne voie rien. Importe. Maintenant.`}
 else if(days>7){el.className='alert danger';el.textContent=`${Math.floor(days)} jours sans import. Un import par semaine, sinon l\u2019appli ne sert à rien.`}
 else el.className='alert'}
@@ -896,7 +933,7 @@ const dep=ms.map(m=>depOf(txMonth(m)));
 const cfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'JetBrains Mono',size:10}}},x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10}}}}};
 if(ch1)ch1.destroy();
 ch1=new Chart(document.getElementById('chartTotal'),{type:'bar',data:{labels:ms,datasets:[
-{data:dep,backgroundColor:dep.map(v=>v>CIBLE?'#dc2626':'#16a34a'),borderRadius:8},
+{data:dep,backgroundColor:ms.map((m,i)=>m===curMonth()?'#c7cbd8':(dep[i]>CIBLE?'#dc2626':'#16a34a')),borderRadius:8},
 {data:ms.map(()=>CIBLE),type:'line',borderColor:'#4f46e5',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false}]},options:cfg});
 const ep0=epargneActuelle();const net=netMensuelMoyen();
 if(ep0===null)return;
@@ -1058,13 +1095,15 @@ const ep0=epargneActuelle();const net=netMensuelMoyen();
 if(ep0===null||net===null)return null;
 const g=gainsEngages();
 const base=(mode==='reel')?net+g:EPARGNE_CIBLE;
-const ref=[],sim=[];let vr=ep0,vs=ep0;
+const ref=[],sim=[];let vr=ep0,vs=ep0;let zeroRef=null,zeroSim=null;
 for(let m=1;m<=horizon;m++){
-vr+=base;ref.push(vr);
+vr=Math.max(0,vr+base);ref.push(vr);
+if(vr<=0&&zeroRef===null)zeroRef=m;
 let add=base+((nmois==null||m<=nmois)?dx:0);
 if(ponctuel&&m===moisP)add+=ponctuel;
-vs+=add;sim.push(vs)}
-return{ep0,base,ref,sim}}
+vs=Math.max(0,vs+add);sim.push(vs);
+if(vs<=0&&zeroSim===null)zeroSim=m}
+return{ep0,base,ref,sim,zeroRef,zeroSim}}
 function dateJalon(serie,cible,ep0){
 if(ep0>=cible)return'déjà atteint';
 for(let m=0;m<serie.length;m++)if(serie[m]>=cible){const d=new Date();d.setMonth(d.getMonth()+m+1);return d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}
@@ -1090,13 +1129,21 @@ if(dx>0&&!nmois)v+=`Effort permanent de ${fs(dx)}/mois : rythme port\u00e9 \u00e
 if(dx<0)v+=`Rel\u00e2chement de ${fs(-dx)}/mois${nmois?' pendant '+nmois+' mois':''} : \u00e7a co\u00fbte <b>${fs(-dx*(nmois||12))}${nmois?'':'/an'}</b>. Dans 12 mois : ${fs(fin12)}.`;
 if(ponctuel<0)v+=` L'achat de ${fs(-ponctuel)} dans ${moisP} mois laisse <b>${fs(r.sim[moisP-1])}</b> d'\u00e9pargne juste apr\u00e8s${r.sim[moisP-1]>0?'':' \u2014 <b style="color:var(--red)">sous z\u00e9ro : impossible sans rentr\u00e9e</b>'}. Dans 12 mois : ${fs(fin12)}.`;
 if(ponctuel>0)v+=` Rentr\u00e9e de ${fs(ponctuel)} dans ${moisP} mois int\u00e9gr\u00e9e. Dans 12 mois : ${fs(fin12)}.`;
+function dMois(m){const d=new Date();d.setMonth(d.getMonth()+m);return d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}
+if(mode==='reel'&&r.base<0){
+if(r.zeroSim)v+=`<div style="margin-top:6px;color:var(--red)">Puis, sans autre changement, l'\u00e9pargne continue de fondre : <b>\u00e0 z\u00e9ro en ${dMois(r.zeroSim)}</b>${r.zeroRef?` (au lieu de ${dMois(r.zeroRef)} sans l'effort : l'effort ach\u00e8te ${r.zeroSim-r.zeroRef} mois)`:''}. La courbe s'arr\u00eate \u00e0 z\u00e9ro : en dessous, \u00e7a n'existe pas.</div>`;
+}
 if(mode!=='reel'&&netMensuelMoyen()<0)v+=`<div style="font-size:11px;opacity:.7;margin-top:4px">Rappel : ton rythme r\u00e9el actuel est n\u00e9gatif \u2014 cette simulation suppose la cible tenue.</div>`;
 document.getElementById('simVerdict').innerHTML=v;
 /* Jalons avant/après */
+if(r.base<0&&(r.zeroRef||r.zeroSim)){
+const dM=m=>{const d=new Date();d.setMonth(d.getMonth()+m);return d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})};
+document.getElementById('simJalons').innerHTML=`<div class="sim-jal"><span>\u00c9pargne \u00e0 z\u00e9ro</span><span><span class="avant">${r.zeroRef?dM(r.zeroRef):'jamais'}</span><span class="apres">${r.zeroSim?dM(r.zeroSim):'jamais'}</span></span></div>`}
+else{
 const cibles=[];let t=Math.ceil(r.ep0/10000)*10000;for(let i=0;i<3;i++){cibles.push(t);t+=10000}
 document.getElementById('simJalons').innerHTML=cibles.map(c=>{
 const av=dateJalon(r.ref,c,r.ep0),ap=dateJalon(r.sim,c,r.ep0);
-return`<div class="sim-jal"><span>${fs(c)}</span><span><span class="avant">${av}</span><span class="apres">${ap}</span></span></div>`}).join('');
+return`<div class="sim-jal"><span>${fs(c)}</span><span><span class="avant">${av}</span><span class="apres">${ap}</span></span></div>`}).join('')}
 /* Chart */
 const labels=[];for(let m=1;m<=60;m++){const d=new Date();d.setMonth(d.getMonth()+m);labels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)}
 if(chSim)chSim.destroy();
@@ -1200,7 +1247,7 @@ env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa 
 rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne. Les virements entre vos comptes ne comptent pas : ce n'est pas un revenu.",
 dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Le total passe en rouge s'il dépasse la cible.",
 cpt:"<b>Comptes.</b> Solde affiché = solde saisi au départ + toutes les opérations importées depuis. Si un solde est faux, il manque des opérations : réimporte un CSV qui couvre la période manquante.",
-lastimp:"<b>Dernier import.</b> L'appli ne voit que ce que tu lui donnes. Un import par semaine. Rappel à 7 jours, alarme à 14.",
+lastimp:"<b>Dernier import.</b> Le délai de chaque compte, un par un. L'appli ne voit que ce qu'on lui donne : un import par semaine et par personne. Au-delà de 7 jours sur un compte courant, l'appli SE VERROUILLE : plus de consultation tant que les relevés ne sont pas à jour — des chiffres faux valent pire que rien. L'épargne, peu active, a 35 jours.",
 impzone:"<b>Import CSV.</b> Deux types de fichiers. 1. Les CSV Caisse d'Épargne (Opérations, puis Télécharger) : l'appli reconnaît chaque compte par le numéro dans le nom du fichier. 2. Le CSV PayPal (paypal.com : Activité, puis Télécharger) : il sert à voir À TRAVERS les lignes 'PayPal' de la banque — abonnements cachés, doublons. Il ne compte pas deux fois : c'est de l'analyse, pas des dépenses en plus. Tu peux tout donner d'un coup. Ce qui est déjà connu est ignoré.",
 impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte toute seule. Choisis un compte à la main seulement si le fichier a été renommé.",
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
@@ -1254,13 +1301,15 @@ b.style.left=x+'px';b.style.top=Math.max(8,y)+'px';
 t.addEventListener('mouseleave',()=>{if(!tipOpen)b.classList.remove('show')},{once:true})});
 
 /* ================= NAV + REFRESH ================= */
-document.querySelectorAll('.nav-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');if(t.dataset.p==='pMois')drawCharts()})});
+document.querySelectorAll('.nav-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');if(t.dataset.p==='pMois')drawCharts();updateBlocage()})});
 function refresh(){
 if(!CFG)return;
 computeAll();
 if(!D.etat&&(FB_ON?firebase.auth().currentUser:true)){buildSetup();document.getElementById('ovlSetup').classList.add('show')}
 else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+updateBlocage();
+const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
 buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
