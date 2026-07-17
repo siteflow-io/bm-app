@@ -396,7 +396,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=8; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=9; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -443,7 +443,16 @@ const OPTIM_LABELS=['Amazon Prime','Amazon Music','Amazon Media','Amazon Digital
 const R=[
 {p:/DRFIP|REMUNERATION/i,c:'rev',l:'Salaire'},{p:/CAF /i,c:'rev',l:'CAF'},{p:/CPAM/i,c:'rev',l:'Remb. CPAM'},{p:/GIE DE PREVOYA|VIR.*PREVOYANCE/i,c:'rev',l:'Remb. prévoyance'},{p:/REM OFFRE CONFORT|REMISE COTISATION/i,c:'rev',l:'Remise cotisation'},{p:/INTERETS/i,c:'rev',l:'Intérêts livret'},
 {p:/ECH PRET|ECHEANCE DE CREDIT/i,c:'fix',l:'Emprunt'},{p:/MACIF/i,c:'fix',l:'Ass. MACIF'},{p:/MAXANCE/i,c:'fix',l:'Ass. Maxance'},{p:/AXA/i,c:'fix',l:'Ass. AXA'},{p:/BPCE ASSUR/i,c:'fix',l:'Ass. BPCE'},{p:/CE BRETAGNE PAYS DE LOIRE/i,c:'fix',l:'Prêt conso'},{p:/CEBPL/i,c:'fix',l:'Ass. CEBPL'},{p:/ASSURANT/i,c:'fix',l:'Ass. Assurant'},{p:/BOUYGUES/i,c:'fix',l:'Bouygues'},{p:/SFR/i,c:'fix',l:'SFR'},{p:/ENGIE/i,c:'fix',l:'Engie'},{p:/SAUR/i,c:'fix',l:'SAUR'},{p:/DGFIP|DIRECTION GENERALE DES FINA/i,c:'fix',l:'Impôts'},{p:/URSSAF/i,c:'fix',l:'CESU'},{p:/ECOLE.*COLLEGE|COLLEGE.*SAINT|INSTITUTION ST ANDRE|ASSOCIATION ECOLE/i,c:'fix',l:'École'},{p:/COTISATION.*CONFORT|COTISATION.*FAMIL/i,c:'fix',l:'Cotis. banque'},{p:/LAFFITTE/i,c:'fix',l:'Téléphone'},{p:/GIEPS|PRLV.*GIEPS/i,c:'fix',l:'Prévoyance'},{p:/CHUBB/i,c:'fix',l:'Ass. Chubb'},{p:/2J SPORTS/i,c:'fix',l:'Salle sport'},{p:/DECATHLON.*LOCAT/i,c:'fix',l:'Vélo Decathlon'},{p:/FORF P\.STAT|FRAIS BANCAIRES|COM CB INT/i,c:'fix',l:'Frais bancaires'},
-{p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/CLAUDE\.AI|ANTHROPIC/i,c:'abo',l:'Claude.ai'},{p:/ELEVENLABS/i,c:'abo',l:'ElevenLabs'},{p:/NETFLIX|DISNEY|SPOTIFY|DEEZER|CANAL/i,c:'abo',l:'Streaming'},
+{p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/BERTHELOT PATRICIA/i,c:'fix',l:"Garde d'enfant"},
+{p:/UNION POUR LE RECOUVRE|URSSAF|PAJEMPLOI/i,c:'fix',l:'Pajemploi (URSSAF)'},
+{p:/OGEC/i,c:'fix',l:'École (OGEC)'},
+{p:/METAGENICS/i,c:'sante',l:'Compléments (Metagenics)'},
+{p:/ADMIRAL INTERMEDIARY|OLIVIER ASSUR/i,c:'fix',l:'Assurances'},
+{p:/QUINC/i,c:'trav',l:'Quincaillerie'},
+{p:/HPY |HYPER U|SUPER U/i,c:'courses',l:'Supermarché'},
+{p:/SOCIETE LOCATION SERVICE/i,c:'ext',l:'Location matériel'},
+{p:/GENE MENEY/i,c:'ext',l:'Famille'},
+{p:/CLAUDE\.AI|ANTHROPIC/i,c:'abo',l:'Claude.ai'},{p:/ELEVENLABS/i,c:'abo',l:'ElevenLabs'},{p:/NETFLIX|DISNEY|SPOTIFY|DEEZER|CANAL/i,c:'abo',l:'Streaming'},
 {p:/INTERMARCHE|LECLERC|CARREFOUR|SUPER U|UEP ALIM|UEP DAC|SAUDIS|BOULANGE|PAIN DE LA DUCH|BOUCH ST HILAIR|JOSEPH DISTRE|AUX SAVEURS/i,c:'courses',l:'Courses'},
 {p:/TOTAL.*RELAIS|CARBURANT|PO SAUMUR|STATION/i,c:'carburant',l:'Carburant'},{p:/INTER CHALISMAR/i,c:'courses',l:'Courses/Carburant'},
 {p:/BOISSINOT|DOUAIRE|VAN OLDENEEL|MADAME FABLET|PHARMACIE|IMAGERIE|GLEMET|CARDIOLOG/i,c:'sante',l:'Santé'},{p:/ALIX MIOT/i,c:'sante',l:'Fertilité'},{p:/CHEQUE/i,c:'sante',l:'Chèque (psy)'},
@@ -505,7 +514,7 @@ out.push(t)}
 return out}
 
 /* ================= INTERNES ================= */
-const INT_LIB=/VIREMENT VERS COMPTE CHEQUE|VIR\. VERS COMPTE CHEQUE|VIREMENT VERS LIVRET|^LIVRET A$|MADELEINE MENEY|VIREMENT DE M MENEY PAUL$|VIREMENT DE MME CLAIRE COLLIGNON/i;
+const INT_LIB=/VIREMENT VERS COMPTE CHEQUE|VIR\. VERS COMPTE CHEQUE|VIREMENT VERS LIVRET|^LIVRET A$|MADELEINE MENEY|MENEY PAUL|CLAIRE COLLIGNON/i;
 function marquerInternes(D){
 const all=[];
 const accs=new Set([...Object.keys(COMPTES||{}),...Object.keys(D.tx||{})]);
@@ -565,7 +574,7 @@ function computeAll(){ALL=marquerInternes(D);
 for(const t of ALL){if(t.chq){const c=(D.cheques||{})[t._acc+'_'+t.chq];
 if(c&&c.benef){t.l='Ch\u00e8que : '+c.benef;if(c.cat)t.c=c.cat}}}
 marquerAnnulations()}
-function txReal(){return ALL.filter(t=>!t._int)}
+function txReal(){return ALL.filter(t=>!t._int&&!t._annule)}
 function txMonth(mk){return txReal().filter(t=>t.date&&t.date.startsWith(mk))}
 function depOf(list){return list.filter(t=>t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0)}
 function revOf(list){return list.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0)}
@@ -1151,8 +1160,7 @@ write('controles/'+acc,{reel,calc:Math.round(calc*100)/100,ecart:Math.round((ree
 function detecterAnomalies(){
 const an=[];
 /* 1. Mouvements familiaux non appari\u00e9s (devraient \u00eatre des virements internes) */
-const INT_TEST=/MENEY|COLLIGNON|MADELEINE/i;
-const suspects=txReal().filter(t=>Math.abs(t.amt)>=50&&(INT_TEST.test(t.lib)||INT_TEST.test(t.full||''))&&!/CHEQUE/i.test(t.lib));
+const suspects=ALL.filter(t=>!t._int&&!t._annule&&Math.abs(t.amt)>=50&&INT_LIB.test(t.lib)&&!/CHEQUE/i.test(t.lib));
 if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom de la famille non reconnu(s) comme virement interne \u2014 risque de fausses d\u00e9penses/faux revenus ('+suspects.slice(0,3).map(t=>t.dd+' '+fs(Math.abs(t.amt))).join(', ')+')'});
 /* 2. \u00c9carts de solde contr\u00f4l\u00e9s */
 for(const[id,c]of comptesTries()){const ct=(D.controles||{})[id];
@@ -1218,7 +1226,7 @@ nh.innerHTML=ns.length?ns.map(n=>`<div class="row"><div class="row-l" style="fon
 
 /* ================= EXPORT JSON ================= */
 function exportJson(){
-const dump={exportDate:new Date().toISOString(),app:'budget-meney',user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,tx:D.tx};
+const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
 const blob=new Blob([JSON.stringify(dump,null,1)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);
 a.download='budget-export-'+new Date().toISOString().slice(0,10)+'.json';
