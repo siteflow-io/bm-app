@@ -379,13 +379,14 @@ projectId:"budget-meney"
    source de vérité. Modifs ensuite : console Firebase ou Claude — jamais l'UI
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 const CFG_DEFAULTS={
-cible:4400,epargneCible:900,revenusRef:5300,fixesRef:2450,
+cible:4400,epargneCible:900,revenusRef:5300,fixesRef:2450,seuilExcep:250,
 env:{courses:1000,carburant:220,sante:150,trav:200,abo:80,ext:300},
 comptes:{paul:{lbl:"Paul",num:"04119545035",type:"courant",ordre:1},claire:{lbl:"Claire",num:"04119543318",type:"courant",ordre:2},commun:{lbl:"Commun",num:"04119047810",type:"courant",ordre:3},epargne:{lbl:"Épargne Madeleine",num:"00135834655",type:"epargne",ordre:4}},
 reglesPerso:{}
 };
 let CFG=null,CIBLE=0,EPARGNE_CIBLE=0,REVENUS_REF=0,FIXES_REF=0,ENV={},COMPTES={};
-function applyCfg(){CIBLE=CFG.cible;EPARGNE_CIBLE=CFG.epargneCible;REVENUS_REF=CFG.revenusRef;FIXES_REF=CFG.fixesRef;ENV=CFG.env;COMPTES=CFG.comptes}
+let SEUIL_EXCEP=250;
+function applyCfg(){CIBLE=CFG.cible;EPARGNE_CIBLE=CFG.epargneCible;REVENUS_REF=CFG.revenusRef;FIXES_REF=CFG.fixesRef;ENV=CFG.env;COMPTES=CFG.comptes;SEUIL_EXCEP=CFG.seuilExcep||250}
 function comptesTries(){return Object.entries(COMPTES).sort((a,b)=>(a[1].ordre||99)-(b[1].ordre||99))}
 const REWARDS=[
 {emoji:'🍰',name:'Plaisirs du quotidien',cost:10,cats:['Pâtisserie','Glaces','Marché']},
@@ -528,14 +529,41 @@ function fdate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long
 function curMonth(){const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`}
 function monthKey(off){const n=new Date();const d=new Date(n.getFullYear(),n.getMonth()+off,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 let ALL=[];
-function computeAll(){ALL=marquerInternes(D)}
+function computeAll(){ALL=marquerInternes(D);marquerAnnulations()}
 function txReal(){return ALL.filter(t=>!t._int)}
 function txMonth(mk){return txReal().filter(t=>t.date&&t.date.startsWith(mk))}
 function depOf(list){return list.filter(t=>t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0)}
 function revOf(list){return list.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0)}
 function monthsWithData(){const s=new Set();txReal().forEach(t=>{if(t.date)s.add(t.date.slice(0,7))});return[...s].sort()}
 function fullMonthsBack(n){const out=[];for(let i=1;i<=n;i++){const mk=monthKey(-i);if(txMonth(mk).length)out.push(mk)}return out}
-function netMensuelMoyen(){const ms=fullMonthsBack(3);if(!ms.length)return null;let tot=0;for(const mk of ms){const l=txMonth(mk);tot+=revOf(l)-depOf(l)}return tot/ms.length}
+/* Exceptionnel = gros montant ponctuel (hors charges fixes). Le r\u00e9current
+   des 3 mois l'exclut ; une provision 12 mois glissants le r\u00e9int\u00e8gre. */
+function depExcep(t){return t.amt<0&&Math.abs(t.amt)>=SEUIL_EXCEP&&t.c!=='fix'&&!t._annule}
+function revExcep(t){return t.amt>0&&t.amt>=SEUIL_EXCEP&&t.c!=='rev'&&!t._annule}
+/* Achat annul\u00e9 : d\u00e9pense exceptionnelle + cr\u00e9dit du M\u00caME montant sous 45 j
+   \u2192 la paire est neutralis\u00e9e (ni d\u00e9pense, ni revenu : il ne s'est rien pass\u00e9). */
+function marquerAnnulations(){
+const deps=txReal().filter(t=>t.amt<0&&Math.abs(t.amt)>=SEUIL_EXCEP&&t.c!=='fix');
+const creds=txReal().filter(t=>t.amt>=SEUIL_EXCEP);
+const used=new Set();
+for(const d of deps){d._annule=false;
+const m=creds.find(c=>!used.has(c.k+c._acc)&&Math.abs(c.amt+d.amt)<0.01&&c.date>=d.date&&(new Date(c.date)-new Date(d.date))<=45*864e5);
+if(m){d._annule=true;m._annule=true;used.add(m.k+m._acc)}}}
+function rythmeDetail(){
+const ms=fullMonthsBack(3);if(!ms.length)return null;
+let recur=0;
+for(const mk of ms){const l=txMonth(mk);
+const rev=l.filter(t=>t.amt>0&&!revExcep(t)).reduce((s,t)=>s+t.amt,0);
+const dep=l.filter(t=>t.amt<0&&!depExcep(t)).reduce((s,t)=>s+Math.abs(t.amt),0);
+recur+=rev-dep}
+recur/=ms.length;
+const ms12=fullMonthsBack(12);
+let prov=0;
+if(ms12.length){
+let tot=0;for(const mk of ms12)tot+=txMonth(mk).filter(depExcep).reduce((s,t)=>s+Math.abs(t.amt),0);
+prov=tot/ms12.length}
+return{rythme:recur-prov,recur,prov,nbMois12:ms12.length}}
+function netMensuelMoyen(){const r=rythmeDetail();return r?r.rythme:null}
 function epargneActuelle(){
 if(!D.etat)return null;
 let tot=0;for(const[id]of comptesTries())tot+=soldeCompte(id)||0;
@@ -732,7 +760,7 @@ document.getElementById('projSpent').textContent=fs(spent);
 document.getElementById('projCible').textContent=fs(CIBLE);
 if(!ALL.length||!mtx.length&&!fullMonthsBack(1).length){document.getElementById('projVal').textContent='--';document.getElementById('projMsg').textContent='Importe les CSV pour lancer la surveillance.';box.className='proj ok';return}
 const hist=fullMonthsBack(3);let dailyVar=null;
-if(hist.length){let v=0,days=0;for(const h of hist){const l=txMonth(h);v+=depOf(l.filter(t=>t.c!=='fix'));days+=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate()}dailyVar=v/days}
+if(hist.length){let v=0,days=0;for(const h of hist){const l=txMonth(h);v+=depOf(l.filter(t=>t.c!=='fix'&&!depExcep(t)));days+=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate()}dailyVar=v/days;const rd=rythmeDetail();if(rd)dailyVar+=rd.prov/30}
 const fixSpent=depOf(mtx.filter(t=>t.c==='fix'));
 const fixRest=Math.max(0,FIXES_REF-fixSpent);
 let proj;
@@ -764,13 +792,15 @@ const ep=epargneActuelle();let net=netMensuelMoyen();
 if(ep===null||net===null){box.className='traj';main.textContent='Saisis les soldes de départ et importe au moins un mois de CSV.';return}
 const gTraj=gainsEngages();net+=gTraj;
 if(net>=50){box.className='traj up';document.getElementById('trajLbl').textContent='Trajectoire d\u2019épargne — ça monte';
-main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · tu mets de côté <span class="mono">+${fs(net)}/mois</span>`;
+const _rd=rythmeDetail();
+main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · tu mets de côté <span class="mono">+${fs(net)}/mois</span>`+(_rd&&_rd.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.75;margin-top:3px">= ${fs(_rd.recur+(gainsEngages()))} de vie courante − ${fs(_rd.prov)} de gros achats (moyenne 12 mois)</div>`:'');
 const targets=[];let t=Math.ceil(ep/10000)*10000;for(let i=0;i<3;i++){targets.push(t);t+=10000}
 jal.innerHTML=targets.map(tg=>{const months=(tg-ep)/net;const d=new Date();d.setMonth(d.getMonth()+Math.ceil(months));
 return`<div class="jalon"><span>${fs(tg)}</span><span class="jd">${d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span></div>`}).join('');
 note.textContent=net>=EPARGNE_CIBLE?`Objectif ${fs(EPARGNE_CIBLE)}/mois tenu. Les 25 000 € des travaux seront prêts bien avant l'heure.`:`Ça monte, mais sous l'objectif de ${fs(EPARGNE_CIBLE)}/mois. En tenant la cible, les paliers arrivent plus vite.`}
 else if(net<=-50){box.className='traj down';document.getElementById('trajLbl').textContent='Alerte — l\u2019épargne fond';
-main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`;
+const _rd2=rythmeDetail();
+main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`+(_rd2&&_rd2.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.8;margin-top:3px">= ${_rd2.recur>=0?'+':''}${fs(_rd2.recur+(gainsEngages()))} de vie courante − ${fs(_rd2.prov)} de gros achats (moyenne 12 mois)</div>`:'');
 const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.floor(months));
 zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
 note.textContent=`À cette date, il ne reste rien. Ni pour les travaux, ni pour un imprévu. Chaque mois sous ${fs(CIBLE)} repousse cette date.`}
@@ -1100,8 +1130,8 @@ body.innerHTML=html}
 
 /* ================= AIDE ⓘ ================= */
 const INFOS={
-proj:"<b>Projection fin de mois.</b> L'appli devine où finira le mois. Le calcul : ce que tu as déjà dépensé + ton rythme habituel pour les jours qui restent + les charges fixes à venir. Les virements entre vos comptes ne comptent pas. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement au-dessus. Rouge qui clignote : très grave. Fiable à partir du 5 du mois.",
-traj:"<b>Trajectoire d'épargne.</b> Épargne = la somme de tous vos comptes. Rythme = ce que vous mettez de côté (ou perdez) par mois, en moyenne sur les 3 derniers mois. Si ça monte : l'appli donne la date de chaque palier (30 000, 40 000, 50 000 €). Si ça descend : elle donne la date où il ne restera RIEN. Ces dates bougent à chaque import.",
+proj:"<b>Projection fin de mois.</b> L'appli devine où finira le mois : ce que tu as déjà dépensé + ton rythme de vie courante pour les jours restants + une part pour les gros achats (leur moyenne sur 1 an) + les charges fixes à venir. Une grosse dépense déjà faite ce mois-ci compte en entier, mais n'est pas multipliée sur les jours restants. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement. Clignotant : très grave. Fiable à partir du 5 du mois.",
+traj:"<b>Trajectoire d'épargne.</b> Épargne = la somme de tous vos comptes. Le rythme, c'est ce que vous mettez VRAIMENT de côté chaque mois. Il se calcule en deux morceaux. 1 — La vie courante : entrées moins sorties, en moyenne sur les 3 derniers mois. Une grosse dépense ponctuelle (plus de 250 €) n'y est pas comptée : la montre d'octobre ne veut pas dire que chaque mois coûte une montre. 2 — Mais les gros achats reviennent toujours. L'appli regarde combien ils coûtent par mois en moyenne sur 1 an, et retire ce montant du rythme. Pareil côté entrées : un don ou une assurance ne compte pas, seuls les revenus qui tombent tous les mois comptent. Un achat remboursé (payé puis rendu) ne compte nulle part : il ne s'est rien passé. Résultat : un rythme stable, honnête, qui ne panique pas au moindre achat et qui n'oublie rien.",
 env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa case, d'après le libellé bancaire. La barre se remplit au fil du mois. Vert : ok. Orange : proche du plafond. Rouge : dépassé. Pour changer un plafond : onglet Règles, verrou intelligent.",
 rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne. Les virements entre vos comptes ne comptent pas : ce n'est pas un revenu.",
 dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Le total passe en rouge s'il dépasse la cible.",
