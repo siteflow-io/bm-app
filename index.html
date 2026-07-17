@@ -447,7 +447,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=14; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=15; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -462,6 +462,9 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:15,date:'2026-07-17',origine:"Paul : une p\u00e9riode sans achat n'est pas une anomalie \u2014 ce qui fait foi, c'est le CSV export\u00e9 de la banque",
+ch:["Suppression du faux rappel fig\u00e9 sur le Commun","Suppression de toute d\u00e9tection de trous par \u00e9cart entre op\u00e9rations : un compte peut rester des semaines sans mouvement, c'est normal","La seule v\u00e9rit\u00e9 de couverture reste la date du dernier CSV import\u00e9 par compte, et le blocage au-del\u00e0 de 7 jours \u2014 rien \u00e0 confirmer \u00e0 la main"],
+cons:["Rien \u00e0 faire : l'app ne te demandera plus de valider des p\u00e9riodes calmes"]},
 {v:14,date:'2026-07-17',origine:"Retours de terrain de Paul (test \u00e0 deux t\u00e9l\u00e9phones) + analyse du 3e export JSON",
 ch:["MOTEUR RUNTIME : labels, cat\u00e9gories et ch\u00e8ques recalcul\u00e9s \u00e0 chaque chargement \u2014 tes renommages prennent effet sur TOUT l'historique, imm\u00e9diatement","Fin du pr\u00e9jug\u00e9 \u00ab Ch\u00e8que (psy) \u00bb : 82 ch\u00e8ques (4 720 \u20ac) redeviennent \u00ab \u00e0 nommer \u00bb au talon num\u00e9rique","P\u00e9ages : cat\u00e9gorie \u00e0 part, badge mensuel distingu\u00e9 des passages carte","Tabac reconnu (Le Bourgeau)","Le verrou parle avec les bons pr\u00e9noms, dans les deux sens","Zoom par pincement sur les deux courbes + bouton de r\u00e9initialisation ; un tap montre toute la colonne","Onglet Diagnostic (ex-Suivi), ic\u00f4ne jauge, et chaque onglet a sa couleur","Dernier import pr\u00e9cis : \u00ab aujourd'hui 12:43 \u00bb, \u00ab hier \u00bb, \u00ab il y a 3 j \u00bb","Import du CSV Amazon (commandes regroup\u00e9es, comme PayPal)","Le prompt pour Claude exige d\u00e9sormais l'enqu\u00eate internet + contexte de vie (URSSAF/Pajemploi \u00e0 \u00e9lucider)","R\u00e8gles d\u00e9dupliqu\u00e9es \u00e0 la saisie"],
 cons:["Nomme tes 82 ch\u00e8ques au talon (Comptes) \u2014 commence par les gros : 250 \u20ac \u00d72","Importe ENFIN le CSV PayPal et le CSV Amazon (m\u00eame geste qu'un relev\u00e9)","Refais un export JSON avec le nouveau prompt pour l'enqu\u00eate compl\u00e8te"]},
@@ -473,7 +476,7 @@ ch:["TOUT S'OUVRE D'UN TAP : barres de mois, familles, enveloppes, revenus \u201
 cons:["Rien \u00e0 refaire c\u00f4t\u00e9 serveur : juste pousser index.html","Essaie le geste : touche une barre de mois, puis une op\u00e9ration","Pour la premi\u00e8re analyse : bouton Copier le prompt + export JSON \u2192 Claude"]},
 {v:11,date:'2026-07-17',origine:"Relecture compl\u00e8te demand\u00e9e par Paul + retours d'usage (solde \u00e0 retaper, sous-titres p\u00e9rim\u00e9s)",
 ch:["Contr\u00f4le de solde VIVANT : l'\u00e9cart se recalcule tout seul \u00e0 chaque import (\u00e0 date de contr\u00f4le constante) \u2014 plus jamais de ressaisie apr\u00e8s un import","Ce journal de d\u00e9veloppement, avec consignes \u00e0 chaque version et bouton Compris","Les montants de l'onglet R\u00e8gles suivent maintenant la config r\u00e9elle (plus de chiffres fig\u00e9s)","Sant\u00e9/Travaux dits \u00ab cumulables \u00bb (le mot \u00ab provision \u00bb est r\u00e9serv\u00e9 aux gros achats)","Rappel de r\u00e9import PayPal dans la ligne des imports (alerte \u00e0 45 j)","Le bandeau de mise \u00e0 jour rev\u00e9rifie quand l'app revient \u00e0 l'\u00e9cran","Purge automatique des journaux d'import","Sous-titres corrig\u00e9s (Simulation, Envies)"],
-cons:["Recoller code.gs dans Apps Script (purge du journal des notifications)","Faire les 4 contr\u00f4les de solde : ils resteront valables \u00e0 vie","R\u00e9exporter le Commun du 20/03 au 10/04 pour trancher la zone grise","Partager le CSV PayPal \u00e0 l'app (jamais import\u00e9 en ligne)"]},
+cons:["Recoller code.gs dans Apps Script (purge du journal des notifications)","Faire les 4 contr\u00f4les de solde : ils resteront valables \u00e0 vie","Partager le CSV PayPal \u00e0 l'app (jamais import\u00e9 en ligne)"]},
 {v:10,date:'2026-07-17',origine:"Bug d\u00e9couvert par Paul : la croix des notifications blanchissait l'\u00e9cran",
 ch:["Croix de retrait d'appareil r\u00e9par\u00e9e (pi\u00e8ge document.write des attributs onclick)"],cons:["Retirer l'ancien appareil, r\u00e9activer les notifications"]},
 {v:9,date:'2026-07-17',origine:"Analyse du premier export JSON de contr\u00f4le",
@@ -1326,12 +1329,8 @@ if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom
 for(const[id,c]of comptesTries()){const ev=ecartVivant(id);
 if(ev&&Math.abs(ev.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ev.ecart)+' sur '+c.lbl+' (contr\u00f4le du '+ev.dateIso.split('-').reverse().join('/')+') \u2014 des op\u00e9rations manquent sur cette p\u00e9riode'})}
 /* 3. Zones grises */
-const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
-let nbGaps=0;
-for(const[id,c]of comptesTries()){if(c.type!=='courant')continue;
-const dts=[...new Set(ALL.filter(t=>t._acc===id&&t.date>=cutoff).map(t=>t.date))].sort();
-for(let i=1;i<dts.length;i++)if((new Date(dts[i])-new Date(dts[i-1]))/864e5>10)nbGaps++}
-if(nbGaps)an.push({grave:false,txt:nbGaps+' p\u00e9riode(s) sans aucune op\u00e9ration \u2014 imports \u00e0 v\u00e9rifier (d\u00e9tail ci-dessous)'});
+/* Pas de d\u00e9tection de trous par \u00e9cart d'op\u00e9rations : une p\u00e9riode sans achat n'est pas une anomalie.
+   La v\u00e9rit\u00e9 de couverture, c'est la date du dernier CSV import\u00e9 (meta/lastImp) + le blocage \u26d4 >7j. */
 /* 4. Non class\u00e9s significatifs */
 const c6=new Date(Date.now()-183*864e5).toISOString().slice(0,10);
 const ncTot=txReal().filter(t=>t.amt<0&&t.l==='Non class\u00e9'&&t.date>=c6).reduce((s,t)=>s+Math.abs(t.amt),0);
