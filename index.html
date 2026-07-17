@@ -275,6 +275,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="card"><div class="card-t">Effort tenu<span class="tip-i" data-i="simeffort">i</span></div>
 <div class="fld"><label>€ de plus (ou de moins si négatif) mis de côté chaque mois</label><input type="number" step="10" id="simDx" placeholder="300"></div>
 <div class="fld"><label>Pendant combien de mois ? (vide = pour toujours)</label><input type="number" step="1" min="1" id="simN" placeholder="3"></div>
+<div class="fld"><label>Point de départ de la simulation</label><select class="inp" id="simBase"><option value="cible">En tenant la cible (4 400 €/mois de dépenses)</option><option value="reel">Au rythme réel actuel (mode miroir)</option></select></div>
 </div>
 <div class="card"><div class="card-t">Événement ponctuel<span class="tip-i" data-i="simponct">i</span></div>
 <div class="fld"><label>Montant (achat : négatif · rentrée : positif)</label><input type="number" step="50" id="simP" placeholder="-1800"></div>
@@ -760,7 +761,7 @@ document.getElementById('projSpent').textContent=fs(spent);
 document.getElementById('projCible').textContent=fs(CIBLE);
 if(!ALL.length||!mtx.length&&!fullMonthsBack(1).length){document.getElementById('projVal').textContent='--';document.getElementById('projMsg').textContent='Importe les CSV pour lancer la surveillance.';box.className='proj ok';return}
 const hist=fullMonthsBack(3);let dailyVar=null;
-if(hist.length){let v=0,days=0;for(const h of hist){const l=txMonth(h);v+=depOf(l.filter(t=>t.c!=='fix'&&!depExcep(t)));days+=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate()}dailyVar=v/days;const rd=rythmeDetail();if(rd)dailyVar+=rd.prov/30}
+if(hist.length){let v=0,days=0;for(const h of hist){const l=txMonth(h);v+=depOf(l.filter(t=>t.c!=='fix'&&!depExcep(t)));days+=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate()}dailyVar=v/days}
 const fixSpent=depOf(mtx.filter(t=>t.c==='fix'));
 const fixRest=Math.max(0,FIXES_REF-fixSpent);
 let proj;
@@ -803,7 +804,7 @@ const _rd2=rythmeDetail();
 main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`+(_rd2&&_rd2.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.8;margin-top:3px">= ${_rd2.recur>=0?'+':''}${fs(_rd2.recur+(gainsEngages()))} de vie courante − ${fs(_rd2.prov)} de gros achats (moyenne 12 mois)</div>`:'');
 const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.floor(months));
 zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
-note.textContent=`À cette date, il ne reste rien. Ni pour les travaux, ni pour un imprévu. Chaque mois sous ${fs(CIBLE)} repousse cette date.`}
+note.innerHTML=`\u00c0 cette date, il ne reste rien. Ni pour les travaux, ni pour un impr\u00e9vu. <b>La sortie existe : en tenant la cible de ${fs(CIBLE)}, le rythme devient +${fs(EPARGNE_CIBLE)}/mois et cette date dispara\u00eet.</b>`}
 else{box.className='traj';main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · ça stagne (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès. À ce rythme, les paliers n'arrivent jamais.`}}
 function updateEnv(){
 const mtx=txMonth(curMonth());
@@ -901,7 +902,8 @@ if(net!==null){let v=ep0;for(let i=1;i<=12;i++){const d=new Date();d.setMonth(d.
 if(ch2)ch2.destroy();
 ch2=new Chart(document.getElementById('chartEpargne'),{type:'line',data:{labels:[...labels,...projLabels],datasets:[
 {data:[...back,...projLabels.map(()=>null)],borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.08)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#4f46e5'},
-{data:[...labels.map((_,i)=>i===labels.length-1?back[back.length-1]:null),...projVals],borderColor:net>=0?'#16a34a':'#dc2626',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2}]},options:cfg})}
+{data:[...labels.map((_,i)=>i===labels.length-1?back[back.length-1]:null),...projVals],borderColor:net>=0?'#16a34a':'#dc2626',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2},
+{data:[...labels.map((_,i)=>i===labels.length-1?back[back.length-1]:null),...projLabels.map((_,i)=>Math.max(0,ep0+EPARGNE_CIBLE*(i+1)))],borderColor:'#16a34a',borderWidth:1.5,borderDash:[2,4],pointRadius:0,tension:.2}]},options:cfg})}
 
 /* ================= VERROU INTELLIGENT DES CIBLES ================= */
 const DELAI_H=72;
@@ -998,10 +1000,11 @@ document.getElementById('addCptForm').style.display='none';
 
 /* ================= SIMULATION ================= */
 let chSim=null;let simCourant=null;
-function simulerTrajectoire(dx,nmois,ponctuel,moisP,horizon){
+function simulerTrajectoire(dx,nmois,ponctuel,moisP,horizon,mode){
 const ep0=epargneActuelle();const net=netMensuelMoyen();
 if(ep0===null||net===null)return null;
-const g=gainsEngages();const base=net+g;
+const g=gainsEngages();
+const base=(mode==='reel')?net+g:EPARGNE_CIBLE;
 const ref=[],sim=[];let vr=ep0,vs=ep0;
 for(let m=1;m<=horizon;m++){
 vr+=base;ref.push(vr);
@@ -1020,18 +1023,21 @@ const nmois=nRaw?Math.max(1,parseInt(nRaw)):null;
 const ponctuel=parseFloat(document.getElementById('simP').value)||0;
 const moisP=Math.max(1,parseInt(document.getElementById('simPM').value)||1);
 if(!dx&&!ponctuel){alert('Renseigne au moins un effort ou un événement.');return}
-const r=simulerTrajectoire(dx,nmois,ponctuel,moisP,60);
+const mode=document.getElementById('simBase').value;
+const r=simulerTrajectoire(dx,nmois,ponctuel,moisP,60,mode);
 if(!r){alert('Il faut les soldes de départ et au moins un mois d\u2019imports.');return}
-simCourant={dx,nmois,ponctuel,moisP};
+simCourant={dx,nmois,ponctuel,moisP,mode};
 document.getElementById('simRes').style.display='block';
 document.getElementById('btnDefi').style.display=(dx>0&&nmois&&!D.defi)?'block':'none';
-/* Verdict */
-let v='';
-if(dx>0&&nmois)v+=`Effort de ${fs(dx)}/mois pendant ${nmois} mois = <b>${fs(dx*nmois)} dégagés</b> au bout. `;
-if(dx>0&&!nmois)v+=`Effort permanent de ${fs(dx)}/mois : ton rythme passe de ${fs(r.base)} à <b>${fs(r.base+dx)}/mois</b>. `;
-if(dx<0)v+=`Relâchement de ${fs(-dx)}/mois${nmois?' pendant '+nmois+' mois':''} : ça coûte <b>${fs(-dx*(nmois||12))}${nmois?'':'/an'}</b>. `;
-if(ponctuel<0)v+=`L'achat de ${fs(-ponctuel)} dans ${moisP} mois est ${r.sim[moisP-1]>0?'absorbable':'<b style="color:var(--red)">IMPOSSIBLE sans passer sous zéro</b>'}. `;
-if(ponctuel>0)v+=`Rentrée de ${fs(ponctuel)} dans ${moisP} mois intégrée. `;
+/* Verdict : toujours le gain relatif ET la position absolue, jamais l'un sans l'autre */
+let v=mode==='reel'?`<span style="opacity:.7">Base : ton rythme r\u00e9el (${r.base>=0?'+':''}${fs(r.base)}/mois).</span> `:`<span style="opacity:.7">Base : cible tenue (+${fs(r.base)}/mois de c\u00f4t\u00e9).</span> `;
+const fin12=r.sim[11];
+if(dx>0&&nmois)v+=`Effort de ${fs(dx)}/mois pendant ${nmois} mois = <b>${fs(dx*nmois)} de mieux</b> qu'en ne le faisant pas. \u00c9pargne \u00e0 la fin de l'effort : <b>${fs(r.sim[nmois-1])}</b>.`;
+if(dx>0&&!nmois)v+=`Effort permanent de ${fs(dx)}/mois : rythme port\u00e9 \u00e0 <b>${r.base+dx>=0?'+':''}${fs(r.base+dx)}/mois</b>. Dans 12 mois : <b>${fs(fin12)}</b>.`;
+if(dx<0)v+=`Rel\u00e2chement de ${fs(-dx)}/mois${nmois?' pendant '+nmois+' mois':''} : \u00e7a co\u00fbte <b>${fs(-dx*(nmois||12))}${nmois?'':'/an'}</b>. Dans 12 mois : ${fs(fin12)}.`;
+if(ponctuel<0)v+=` L'achat de ${fs(-ponctuel)} dans ${moisP} mois laisse <b>${fs(r.sim[moisP-1])}</b> d'\u00e9pargne juste apr\u00e8s${r.sim[moisP-1]>0?'':' \u2014 <b style="color:var(--red)">sous z\u00e9ro : impossible sans rentr\u00e9e</b>'}. Dans 12 mois : ${fs(fin12)}.`;
+if(ponctuel>0)v+=` Rentr\u00e9e de ${fs(ponctuel)} dans ${moisP} mois int\u00e9gr\u00e9e. Dans 12 mois : ${fs(fin12)}.`;
+if(mode!=='reel'&&netMensuelMoyen()<0)v+=`<div style="font-size:11px;opacity:.7;margin-top:4px">Rappel : ton rythme r\u00e9el actuel est n\u00e9gatif \u2014 cette simulation suppose la cible tenue.</div>`;
 document.getElementById('simVerdict').innerHTML=v;
 /* Jalons avant/après */
 const cibles=[];let t=Math.ceil(r.ep0/10000)*10000;for(let i=0;i<3;i++){cibles.push(t);t+=10000}
@@ -1042,7 +1048,7 @@ return`<div class="sim-jal"><span>${fs(c)}</span><span><span class="avant">${av}
 const labels=[];for(let m=1;m<=60;m++){const d=new Date();d.setMonth(d.getMonth()+m);labels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)}
 if(chSim)chSim.destroy();
 chSim=new Chart(document.getElementById('chartSim'),{type:'line',data:{labels,datasets:[
-{data:r.ref,borderColor:'#8b91ad',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2,label:'Sans rien changer'},
+{data:r.ref,borderColor:'#8b91ad',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2,label:mode==='reel'?'Rythme r\u00e9el, sans l\u2019effort':'Cible tenue, sans l\u2019effort'},
 {data:r.sim,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.07)',fill:true,borderWidth:2.5,pointRadius:0,tension:.2,label:'Avec le scénario'}]},
 options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{family:'Outfit',size:10},boxWidth:14}}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'JetBrains Mono',size:9}}},x:{grid:{display:false},ticks:{font:{family:'Outfit',size:9},maxTicksLimit:6}}}}})}
 function runObj(){
@@ -1056,7 +1062,12 @@ const requis=cible/n; /* \u00e9pargne mensuelle n\u00e9cessaire pour d\u00e9gage
 const effort=requis-base;
 let h=`D\u00e9gager ${fs(cible)} en ${n} mois = mettre <b>${fs(requis)}/mois</b> de c\u00f4t\u00e9 (tu passerais de ${fs(ep0)} \u00e0 ${fs(ep0+cible)}).`;
 if(effort<=0)h+=` Ton rythme actuel (${fs(base)}/mois) <b style="color:var(--green)">suffit d\u00e9j\u00e0</b> \u2014 \u00e0 ce rythme tu y seras m\u00eame en ${Math.ceil(cible/base)} mois.`;
-else h+=` Ton rythme actuel : ${fs(base)}/mois \u2192 il manque <b>${fs(effort)}/mois</b>. Concr\u00e8tement : d\u00e9penser au maximum <b>${fs(REVENUS_REF-requis)}/mois</b>. ${effort>1500?'<span style="color:var(--red)">Tr\u00e8s dur \u00e0 ce d\u00e9lai \u2014 allonge, ou combine avec une rentr\u00e9e.</span>':effort>500?'Exigeant mais jouable si les Optimisations sont faites.':'Tout \u00e0 fait tenable.'}`;
+else{
+const vsCible=requis-EPARGNE_CIBLE;
+h+=` Plafond de d\u00e9penses : <b>${fs(REVENUS_REF-requis)}/mois</b>.`;
+if(vsCible<=0)h+=` <b style="color:var(--green)">Tenir la cible normale (${fs(CIBLE)}) suffit</b> \u2014 et m\u00eame avec de la marge (${fs(-vsCible)}/mois).`;
+else h+=` M\u00eame la cible tenue (+${fs(EPARGNE_CIBLE)}/mois) ne suffit pas : il faut <b>${fs(vsCible)}/mois de plus</b>. ${vsCible>800?'<span style="color:var(--red)">Tr\u00e8s dur \u00e0 ce d\u00e9lai \u2014 allonge, ou combine avec une rentr\u00e9e.</span>':'Exigeant mais jouable si les Optimisations sont faites.'}`;
+h+=`<div style="font-size:11px;opacity:.7;margin-top:4px">Ton rythme r\u00e9el actuel : ${base>=0?'+':''}${fs(base)}/mois.</div>`}
 el.innerHTML=h}
 function saveScenario(){
 if(!simCourant){alert('Lance d\u2019abord une simulation.');return}
@@ -1130,7 +1141,7 @@ body.innerHTML=html}
 
 /* ================= AIDE ⓘ ================= */
 const INFOS={
-proj:"<b>Projection fin de mois.</b> L'appli devine où finira le mois : ce que tu as déjà dépensé + ton rythme de vie courante pour les jours restants + une part pour les gros achats (leur moyenne sur 1 an) + les charges fixes à venir. Une grosse dépense déjà faite ce mois-ci compte en entier, mais n'est pas multipliée sur les jours restants. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement. Clignotant : très grave. Fiable à partir du 5 du mois.",
+proj:"<b>Projection fin de mois.</b> L'appli devine où finira LE MOIS EN COURS : ce que tu as déjà dépensé + ton rythme de vie courante pour les jours restants + les charges fixes à venir. Un gros achat déjà fait compte en entier, mais n'est pas multiplié sur les jours restants — et l'appli ne suppose pas qu'un gros achat va arriver : elle projette le mois tel qu'il se dessine. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement. Clignotant : très grave. Fiable à partir du 5 du mois.",
 traj:"<b>Trajectoire d'épargne.</b> Épargne = la somme de tous vos comptes. Le rythme, c'est ce que vous mettez VRAIMENT de côté chaque mois. Il se calcule en deux morceaux. 1 — La vie courante : entrées moins sorties, en moyenne sur les 3 derniers mois. Une grosse dépense ponctuelle (plus de 250 €) n'y est pas comptée : la montre d'octobre ne veut pas dire que chaque mois coûte une montre. 2 — Mais les gros achats reviennent toujours. L'appli regarde combien ils coûtent par mois en moyenne sur 1 an, et retire ce montant du rythme. Pareil côté entrées : un don ou une assurance ne compte pas, seuls les revenus qui tombent tous les mois comptent. Un achat remboursé (payé puis rendu) ne compte nulle part : il ne s'est rien passé. Résultat : un rythme stable, honnête, qui ne panique pas au moindre achat et qui n'oublie rien.",
 env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa case, d'après le libellé bancaire. La barre se remplit au fil du mois. Vert : ok. Orange : proche du plafond. Rouge : dépassé. Pour changer un plafond : onglet Règles, verrou intelligent.",
 rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne. Les virements entre vos comptes ne comptent pas : ce n'est pas un revenu.",
@@ -1143,18 +1154,18 @@ cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde d
 export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
 envies:"<b>Récompenses.</b> Coche une envie : le budget extras restant se recalcule. Valide : ça devient un engagement. Au prochain import, l'appli cherche la dépense et dit si tu as tenu le montant prévu (marge de 15 %). Le plaisir prévu et chiffré, pas le plaisir subi.",
 chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. La ligne pointillée, c'est la cible.",
-chep:"<b>Épargne.</b> Ligne pleine : le passé, mois par mois. Ligne pointillée : les 12 prochains mois si tu gardes ton rythme actuel. Verte si ça monte, rouge si ça fond.",
+chep:"<b>Épargne.</b> Ligne pleine : le passé, mois par mois. Deux pointillés pour l'avenir : ton rythme réel actuel (vert si ça monte, rouge si ça fond), et en petits points verts ce que donnerait la cible tenue (+900 €/mois). L'écart entre les deux, c'est l'enjeu.",
 score:"<b>Score /20.</b> On part de 20 et on enlève des points. Mois au-dessus de la cible : jusqu'à −8. Import en retard : −2 à −4. Mois précédent qui a mangé l'épargne : −5. Découvert : −3. Le score se recalcule à chaque import.",
 cibles:"<b>Cibles en vigueur.</b> Les chiffres que toute l'appli utilise en ce moment. Ils vivent dans Firebase, pas dans le code. Pour les changer : le verrou ci-dessous. Tout changement est noté au journal.",
 pending:"<b>Demandes en cours.</b> Chaque demande d'assouplissement s'affiche ici, chez vous deux, avec un compte à rebours de 72 h. Trois sorties : tu annules (tout de suite, toujours possible) · l'autre approuve depuis son téléphone (tout de suite) · le délai passe ET tu confirmes. Si tu ne reviens pas confirmer, rien ne change.",
 verrou:"<b>Verrou intelligent.</b> DURCIR une cible (dépenser moins, épargner plus) : tout de suite. L'ADOUCIR (dépenser plus, épargner moins) : 72 h d'attente + confirmation, ou l'accord de l'autre. On n'approuve jamais sa propre demande. Tout est noté au journal, avec le nom et la date.",
-defi:"<b>Défi en cours.</b> Un engagement pris depuis l'onglet Simu : dépenser moins qu'un plafond, pendant un nombre de mois donné. Le défi démarre le 1er du mois suivant. Chaque mois passé est jugé : tenu ou raté, avec le montant. Le compteur 'dégagé' fait la somme de ce que tu as vraiment mis de côté par rapport à la cible normale. À la fin : réussi ou manqué, et ça reste dans l'historique — l'abandon aussi. Un seul défi à la fois. Claire voit tout.",
+defi:"<b>Défi en cours.</b> Un engagement pris depuis l'onglet Simu : dépenser moins qu'un plafond, pendant un nombre de mois donné. Le défi démarre le 1er du mois suivant. Chaque mois passé est jugé : tenu ou raté, avec le montant. TOUT compte, même l'imprévu — c'est le principe d'un défi court. Le compteur 'dégagé' fait la somme de ce que tu as vraiment mis de côté par rapport à la cible normale. À la fin : réussi ou manqué, et ça reste dans l'historique — l'abandon aussi. Un seul défi à la fois. Claire voit tout.",
 journal:"<b>Journal.</b> La trace de chaque changement de cible : quoi, ancienne valeur, nouvelle valeur, qui, quand, comment. Rien ne s'efface. Si le journal est vide, c'est que les cibles n'ont jamais bougé — très bien.",
 actions:"<b>Optimisations.</b> L'appli croise tes relevés bancaires ET ton export PayPal sur 4 mois. Elle repère : les abonnements, les services prélevés deux fois par mois (avec les jours exacts), et les DOUBLONS entre plateformes — le même besoin payé plusieurs fois (ex. la musique via Spotify + Amazon + YouTube). Chaque ligne dit combien ça rapporte. Cocher = promettre que c'est stoppé : le gain compte tout de suite. Si le prélèvement revient aux imports suivants, la ligne passe en rouge et le gain est repris. Cocher n'est pas résilier.",
-simeffort:"<b>Effort tenu.</b> Mets un montant : combien de plus tu mets de côté chaque mois. Avec une durée : un sacrifice temporaire (3 mois de carême budgétaire). Sans durée : un changement permanent. Un montant négatif simule un relâchement — pour voir ce qu'il coûte.",
+simeffort:"<b>Effort tenu.</b> Tu choisis un effort (€/mois de plus mis de côté) et une durée. Le point de départ, c'est TOI qui le choisis : par défaut, la simulation suppose que la cible de dépenses est tenue — on simule des choix d'avenir, pas la poursuite de la dérive. Pour voir ce que donne le rythme réel actuel, choisis le mode miroir. Le résultat donne toujours les deux chiffres : ce que l'effort rapporte EN PLUS, et où en est l'épargne au bout.",
 simponct:"<b>Événement ponctuel.</b> Un achat (montant négatif) ou une rentrée d'argent (positif), placé dans le futur. L'appli dit s'il est absorbable et ce qu'il décale.",
-simres:"<b>Résultat.</b> La courbe grise pointillée : si tu ne changes rien. La courbe bleue : avec ton scénario. En dessous, chaque palier avec sa date d'avant (barrée) et d'après. Tout est calculé sur TON rythme réel des 3 derniers mois, gains d'Optimisations inclus.",
-simobj:"<b>Objectif inversé.</b> Tu dis combien tu veux dégager EN PLUS de ton épargne actuelle, et en combien de mois. L'appli répond : combien mettre de côté chaque mois, ce qui manque par rapport à ton rythme réel, et le plafond de dépenses que ça impose. Verdict honnête : tenable, exigeant, ou trop dur à ce délai.",
+simres:"<b>Résultat.</b> Deux courbes : sans l'effort, avec l'effort — sur la même base (celle que tu as choisie au-dessus). Le texte donne le gain de l'effort ET l'épargne au bout : les deux, toujours, pour que le texte et la courbe racontent la même histoire. Les paliers montrent leur date avant/après. Sauvegarde le scénario pour en parler avec Claire, ou engage-toi dessus.",
+simobj:"<b>Objectif inversé.</b> Tu dis combien tu veux dégager EN PLUS, et en combien de mois. L'appli répond : l'épargne mensuelle qu'il faut, le plafond de dépenses que ça impose, et surtout la comparaison qui compte : est-ce que tenir la cible normale suffit, ou faut-il faire plus ? Ton rythme réel est rappelé en dessous, pour information.",
 simscen:"<b>Scénarios sauvegardés.</b> Nomme un scénario et garde-le : il est partagé, Claire le voit sur son téléphone. C'est fait pour décider ensemble AVANT de dépenser. ▶ recharge le scénario, ✕ le supprime.",
 setup:"<b>Soldes de départ.</b> Le point zéro de tout. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME. Un solde faux = toutes les projections fausses d'autant.",
 login:"<b>Connexion.</b> Seuls vos deux emails ont accès. Les comptes sont créés dans la console Firebase. C'est aussi cette identité qui sert au verrou : l'appli sait qui demande et qui approuve."
