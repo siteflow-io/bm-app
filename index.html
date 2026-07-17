@@ -386,7 +386,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=4; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=5; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -1046,6 +1046,7 @@ const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistrati
 if(!token){alert('Impossible d\u2019obtenir le jeton. R\u00e9essaie.');return}
 write('fcmTokens/'+tokId(token),{token,email:userEmail(),ua:navigator.userAgent.slice(0,80),ts:Date.now()});
 localStorage.setItem('fcmTok',tokId(token));
+try{messaging.onMessage(p=>{const n=(p&&p.notification)||{};notifLocale(n.title||'Budget Meney',n.body||'')})}catch(e){}
 const pend=localStorage.getItem('pendingGreet');localStorage.removeItem('pendingGreet');
 await notifLocale(pend?'\u2705 Budget Meney install\u00e9 et notifications activ\u00e9es':'\ud83d\udd14 Notifications activ\u00e9es',pend?'Tout est en place sur cet appareil. Premi\u00e8re notification serveur demain matin entre 7h et 9h.':'Cet appareil recevra la projection chaque matin entre 7h et 9h.');
 updateNotifs()}catch(e){alert('Erreur : '+e.message)}}
@@ -1332,6 +1333,7 @@ location.reload()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 setTimeout(checkVersion,800);
 setTimeout(saluerInstallation,1500);
+setTimeout(()=>{try{if(FB_ON&&Notification.permission==='granted'&&localStorage.getItem('fcmTok')){firebase.messaging().onMessage(p=>{const n=(p&&p.notification)||{};notifLocale(n.title||'Budget Meney',n.body||'')})}}catch(e){}},2000);
 boot();
 </script>
 </body>
