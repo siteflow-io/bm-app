@@ -290,7 +290,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" id="btnDefi" style="display:none" onclick="engagerDefi()">🔥 Je m'engage sur cet effort</button>
 </div>
 <div class="card"><div class="card-t">Objectif inversé<span class="tip-i" data-i="simobj">i</span></div>
-<div class="fld"><label>Je veux avoir (€)</label><input type="number" step="500" id="objM" placeholder="50000"></div>
+<div class="fld"><label>Je veux dégager (€) — en plus de ce que j'ai déjà</label><input type="number" step="500" id="objM" placeholder="20000"></div>
 <div class="fld"><label>Dans combien de mois ?</label><input type="number" step="1" min="1" id="objN" placeholder="36"></div>
 <button class="btn-engage" onclick="runObj()">Calculer l'effort</button>
 <div id="objRes" style="font-size:13px;font-weight:700;line-height:1.5;margin-top:10px"></div>
@@ -1022,11 +1022,12 @@ const el=document.getElementById('objRes');
 const ep0=epargneActuelle();const net=netMensuelMoyen();
 if(!cible||!n||ep0===null||net===null){el.textContent='Renseigne le montant et le délai (et importe des CSV).';return}
 const base=net+gainsEngages();
-const requis=(cible-ep0)/n;
+const requis=cible/n; /* \u00e9pargne mensuelle n\u00e9cessaire pour d\u00e9gager \u00ab cible \u00bb EN PLUS */
 const effort=requis-base;
-if(cible<=ep0){el.innerHTML=`Tu as déjà ${fs(ep0)} : objectif atteint.`;return}
-if(effort<=0)el.innerHTML=`${fs(cible)} dans ${n} mois : il faut ${fs(requis)}/mois de côté. Ton rythme actuel (${fs(base)}/mois) <b style="color:var(--green)">suffit déjà</b> — tu y seras même en avance.`;
-else el.innerHTML=`${fs(cible)} dans ${n} mois : il faut mettre <b>${fs(requis)}/mois</b> de côté, soit <b>${fs(effort)}/mois de plus</b> qu'aujourd'hui. Concrètement : dépenser au maximum <b>${fs(REVENUS_REF-requis)}/mois</b>. ${effort>1500?'<span style="color:var(--red)">Très dur à ce délai — allonge, ou combine avec une rentrée.</span>':effort>500?'Exigeant mais jouable si les Optimisations sont faites.':'Tout à fait tenable.'}`}
+let h=`D\u00e9gager ${fs(cible)} en ${n} mois = mettre <b>${fs(requis)}/mois</b> de c\u00f4t\u00e9 (tu passerais de ${fs(ep0)} \u00e0 ${fs(ep0+cible)}).`;
+if(effort<=0)h+=` Ton rythme actuel (${fs(base)}/mois) <b style="color:var(--green)">suffit d\u00e9j\u00e0</b> \u2014 \u00e0 ce rythme tu y seras m\u00eame en ${Math.ceil(cible/base)} mois.`;
+else h+=` Ton rythme actuel : ${fs(base)}/mois \u2192 il manque <b>${fs(effort)}/mois</b>. Concr\u00e8tement : d\u00e9penser au maximum <b>${fs(REVENUS_REF-requis)}/mois</b>. ${effort>1500?'<span style="color:var(--red)">Tr\u00e8s dur \u00e0 ce d\u00e9lai \u2014 allonge, ou combine avec une rentr\u00e9e.</span>':effort>500?'Exigeant mais jouable si les Optimisations sont faites.':'Tout \u00e0 fait tenable.'}`;
+el.innerHTML=h}
 function saveScenario(){
 if(!simCourant){alert('Lance d\u2019abord une simulation.');return}
 const nom=document.getElementById('simNom').value.trim()||'Scénario sans nom';
@@ -1123,7 +1124,7 @@ actions:"<b>Optimisations.</b> L'appli croise tes relevés bancaires ET ton expo
 simeffort:"<b>Effort tenu.</b> Mets un montant : combien de plus tu mets de côté chaque mois. Avec une durée : un sacrifice temporaire (3 mois de carême budgétaire). Sans durée : un changement permanent. Un montant négatif simule un relâchement — pour voir ce qu'il coûte.",
 simponct:"<b>Événement ponctuel.</b> Un achat (montant négatif) ou une rentrée d'argent (positif), placé dans le futur. L'appli dit s'il est absorbable et ce qu'il décale.",
 simres:"<b>Résultat.</b> La courbe grise pointillée : si tu ne changes rien. La courbe bleue : avec ton scénario. En dessous, chaque palier avec sa date d'avant (barrée) et d'après. Tout est calculé sur TON rythme réel des 3 derniers mois, gains d'Optimisations inclus.",
-simobj:"<b>Objectif inversé.</b> Tu donnes le but et la date, l'appli calcule l'effort. Elle dit combien mettre de côté par mois, combien dépenser au maximum, et si c'est tenable.",
+simobj:"<b>Objectif inversé.</b> Tu dis combien tu veux dégager EN PLUS de ton épargne actuelle, et en combien de mois. L'appli répond : combien mettre de côté chaque mois, ce qui manque par rapport à ton rythme réel, et le plafond de dépenses que ça impose. Verdict honnête : tenable, exigeant, ou trop dur à ce délai.",
 simscen:"<b>Scénarios sauvegardés.</b> Nomme un scénario et garde-le : il est partagé, Claire le voit sur son téléphone. C'est fait pour décider ensemble AVANT de dépenser. ▶ recharge le scénario, ✕ le supprime.",
 setup:"<b>Soldes de départ.</b> Le point zéro de tout. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME. Un solde faux = toutes les projections fausses d'autant.",
 login:"<b>Connexion.</b> Seuls vos deux emails ont accès. Les comptes sont créés dans la console Firebase. C'est aussi cette identité qui sert au verrou : l'appli sait qui demande et qui approuve."
