@@ -12,7 +12,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
 .nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 16px rgba(0,0,0,.03)}
-.nav-tab{flex:1;padding:10px 0 7px;text-align:center;font-size:9px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:.2s;text-transform:uppercase;letter-spacing:.6px}
+.nav-tab{flex:1;padding:10px 0 7px;text-align:center;font-size:8px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:.2s;text-transform:uppercase;letter-spacing:.6px}
 .nav-tab.active{color:var(--accent)}
 .nav-tab svg{display:block;margin:0 auto 2px;width:20px;height:20px}
 .page{display:none;padding:16px 16px 96px;max-width:430px;margin:0 auto;animation:fi .25s ease}
@@ -177,7 +177,15 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 #tipBubble{position:fixed;z-index:999;max-width:300px;background:var(--text);color:#fff;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5;font-weight:500;box-shadow:0 12px 32px rgba(0,0,0,.28);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .15s,transform .15s}
 #tipBubble.show{opacity:1;transform:translateY(0)}
 #tipBubble b{color:#a5b4fc}
-@media(max-width:380px){.gauge-val{font-size:34px}.proj-val{font-size:28px}}
+.sc-mini{padding:12px 16px}.sc-mini .sc-card{box-shadow:none;border:none;padding:0;margin:0;display:flex;align-items:center;gap:16px;text-align:left}
+.sc-mini .sc-circ{width:76px;height:76px;margin:0;flex:0 0 76px}
+.sc-mini .sc-v{font-size:18px}
+.sc-mini .sc-lbl{font-size:13px}
+.sim-jal{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:700}
+.sim-jal:last-child{border-bottom:none}
+.sim-jal .avant{color:var(--text-muted);text-decoration:line-through;font-weight:500;margin-right:8px}
+.sim-jal .apres{font-family:'JetBrains Mono',monospace;color:var(--accent)}
+@media(max-width:380px){.gauge-val{font-size:34px}.proj-val{font-size:28px}.nav-tab{letter-spacing:.2px}}
 </style>
 </head>
 <body>
@@ -201,8 +209,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
 </div></div>
 
-<!-- BUDGET -->
-<div class="page active" id="p1">
+<!-- SUIVI -->
+<div class="page active" id="pSuivi">
 <div class="hdr"><h1>Budget Meney</h1><p id="curDate"></p></div>
 <div class="alert" id="alertB"></div>
 <div class="proj ok" id="projBox">
@@ -219,22 +227,89 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="jalons" id="trajJalons"></div>
 <div class="traj-note" id="trajNote"></div>
 </div>
-<div class="act-panel" id="actP"><h3>⚠️ Optimisations <span class="act-badge" id="actN"></span><span class="tip-i" data-i="actions">i</span></h3><div id="actGains" style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px"></div><div id="actL"></div></div>
-<div class="card"><div class="card-t">Enveloppes du mois<span class="tip-i" data-i="env">i</span></div><div id="envList"></div></div>
-<div class="card"><div class="card-t">Revenus du mois<span class="tip-i" data-i="rev">i</span></div><div id="revList"></div></div>
-<div class="card"><div class="card-t">Dépenses du mois<span class="tip-i" data-i="dep">i</span></div><div id="depList"></div></div>
-<div class="card"><div class="card-t">Comptes<span class="tip-i" data-i="cpt">i</span></div><div id="cptList"></div>
-<div class="row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px"><div class="row-l" style="font-weight:800;color:var(--text)">Liquidités + épargne</div><div class="row-v" id="patN" style="font-size:15px">--</div></div>
+<div class="card" id="defiCard" style="display:none"><div class="card-t">Défi en cours<span class="tip-i" data-i="defi">i</span></div><div id="defiBody"></div></div>
+<div class="card sc-mini"><div class="sc-card sc-flat"><div class="sc-circ"><svg viewBox="0 0 130 130"><circle class="sc-trk" cx="65" cy="65" r="54"/><circle class="sc-fl" id="scFl" cx="65" cy="65" r="54" stroke-dasharray="339.3" stroke-dashoffset="339.3"/></svg><div class="sc-v" id="scV">--</div></div><div><div class="sc-lbl" id="scLbl">Importe un CSV</div><span class="tip-i" data-i="score" style="margin-left:0;margin-top:4px">i</span></div></div>
+<div class="card"><div class="card-t">Critères</div>
+<div class="row"><div class="row-l">Trajectoire du mois</div><div class="row-v" id="sc1">--</div></div>
+<div class="row"><div class="row-l">Import régulier</div><div class="row-v" id="sc2">--</div></div>
+<div class="row"><div class="row-l">Épargne du mois précédent</div><div class="row-v" id="sc3">--</div></div>
+<div class="row"><div class="row-l">Pas de découvert</div><div class="row-v" id="sc4">--</div></div>
+</div>
 </div>
 <div class="last-imp">Dernier import : <span id="lastImp">aucun</span><span class="tip-i" data-i="lastimp">i</span></div>
 </div>
+</div>
 
-<!-- IMPORT -->
-<div class="page" id="p2">
-<div class="hdr"><h1>Importer</h1><p>CSV Caisse d'Épargne — détection auto du compte</p></div>
+<!-- MOIS -->
+<div class="page" id="pMois">
+<div class="hdr"><h1>Le mois</h1><p>Enveloppes, flux et courbes</p></div>
+<div class="card"><div class="card-t">Enveloppes du mois<span class="tip-i" data-i="env">i</span></div><div id="envList"></div></div>
+<div class="card"><div class="card-t">Dépenses du mois<span class="tip-i" data-i="dep">i</span></div><div id="depList"></div></div>
+<div class="card"><div class="card-t">Revenus du mois<span class="tip-i" data-i="rev">i</span></div><div id="revList"></div></div>
+<div class="card"><div class="card-t">Dépenses totales par mois<span class="tip-i" data-i="chtot">i</span></div><div class="chart-wrap"><canvas id="chartTotal"></canvas></div></div>
+<div class="card"><div class="card-t">Épargne : réel et projection<span class="tip-i" data-i="chep">i</span></div><div class="chart-wrap"><canvas id="chartEpargne"></canvas></div></div>
+
+</div>
+
+<!-- OPTIM -->
+<div class="page" id="pOptim">
+<div class="hdr"><h1>Optimisations</h1><p>Ce que tes relevés permettent de récupérer</p></div>
+<div class="act-panel" id="actP"><h3>⚠️ Optimisations <span class="act-badge" id="actN"></span><span class="tip-i" data-i="actions">i</span></h3><div id="actGains" style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px"></div><div id="actL"></div></div>
+
+</div>
+
+<!-- ENVIES -->
+<div class="page" id="pEnvies">
+<div class="hdr"><h1>Récompenses</h1><p>Simulateur de dépenses plaisir<span class="tip-i" data-i="envies">i</span></p></div>
+<div class="rw-rest-lbl">Budget extras disponible</div>
+<div class="rw-rest" id="rwRest">-- €</div>
+<div id="rwList"></div>
+<button class="btn-engage" id="btnEngage" disabled onclick="doEngage()">Valider ces dépenses</button>
+<div class="card" style="margin-top:14px" id="engCard"><div class="card-t">Engagements en cours</div><div id="engList"></div></div>
+
+</div>
+
+<!-- SIMULATION -->
+<div class="page" id="pSimu">
+<div class="hdr"><h1>Simulation</h1><p>Et si ? Chiffré sur TON rythme réel</p></div>
+<div class="card"><div class="card-t">Effort tenu<span class="tip-i" data-i="simeffort">i</span></div>
+<div class="fld"><label>€ de plus (ou de moins si négatif) mis de côté chaque mois</label><input type="number" step="10" id="simDx" placeholder="300"></div>
+<div class="fld"><label>Pendant combien de mois ? (vide = pour toujours)</label><input type="number" step="1" min="1" id="simN" placeholder="3"></div>
+</div>
+<div class="card"><div class="card-t">Événement ponctuel<span class="tip-i" data-i="simponct">i</span></div>
+<div class="fld"><label>Montant (achat : négatif · rentrée : positif)</label><input type="number" step="50" id="simP" placeholder="-1800"></div>
+<div class="fld"><label>Dans combien de mois ?</label><input type="number" step="1" min="0" id="simPM" placeholder="2"></div>
+</div>
+<button class="btn-engage" onclick="runSim()">Simuler</button>
+<div class="card" id="simRes" style="display:none"><div class="card-t">Résultat<span class="tip-i" data-i="simres">i</span></div>
+<div id="simVerdict" style="font-size:13px;font-weight:700;line-height:1.5;margin-bottom:10px"></div>
+<div class="chart-wrap"><canvas id="chartSim"></canvas></div>
+<div id="simJalons"></div>
+<div class="fld" style="margin-top:12px"><label>Nom du scénario (pour le garder et en parler avec Claire)</label><input type="text" id="simNom" placeholder="Extracteur 2027"></div>
+<button class="btn-engage" style="background:var(--surface);color:var(--accent);border:2px solid var(--accent);box-shadow:none" onclick="saveScenario()">Sauvegarder ce scénario</button>
+<button class="btn-engage" id="btnDefi" style="display:none" onclick="engagerDefi()">🔥 Je m'engage sur cet effort</button>
+</div>
+<div class="card"><div class="card-t">Objectif inversé<span class="tip-i" data-i="simobj">i</span></div>
+<div class="fld"><label>Je veux avoir (€)</label><input type="number" step="500" id="objM" placeholder="50000"></div>
+<div class="fld"><label>Dans combien de mois ?</label><input type="number" step="1" min="1" id="objN" placeholder="36"></div>
+<button class="btn-engage" onclick="runObj()">Calculer l'effort</button>
+<div id="objRes" style="font-size:13px;font-weight:700;line-height:1.5;margin-top:10px"></div>
+</div>
+<div class="card"><div class="card-t">Scénarios sauvegardés<span class="tip-i" data-i="simscen">i</span></div><div id="scenList"></div></div>
+</div>
+
+<!-- COMPTES -->
+<div class="page" id="pComptes">
+<div class="hdr"><h1>Comptes &amp; données</h1><p>Soldes, imports, export</p></div>
+<div class="card"><div class="card-t">Comptes<span class="tip-i" data-i="cpt">i</span></div><div id="cptList"></div>
+<div class="row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px"><div class="row-l" style="font-weight:800;color:var(--text)">Liquidités + épargne</div><div class="row-v" id="patN" style="font-size:15px">--</div></div>
+</div>
 <div style="text-align:right;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Compte de destination</span><span class="tip-i" data-i="impsel">i</span></div><div class="imp-sel" id="accSel"></div>
 <div class="imp-zone" id="impZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><h3>Importer un ou plusieurs CSV</h3><p>Les opérations déjà connues sont ignorées</p></div><div style="text-align:center;margin:-8px 0 12px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Comment ça marche</span><span class="tip-i" data-i="impzone">i</span></div>
 <div class="card" id="impRes" style="display:none"><div class="card-t">Résultat</div><div id="impSum"></div></div>
+<div class="card"><div class="card-t">Export de contrôle<span class="tip-i" data-i="export">i</span></div>
+<button class="btn-engage" style="margin-top:0" onclick="exportJson()">Exporter toutes les données (JSON)</button>
+</div>
 <div class="card"><div class="card-t">Comptes suivis<span class="tip-i" data-i="cptadm">i</span></div><div id="cptAdmin"></div>
 <button class="btn-engage" style="margin-top:8px;background:var(--surface);color:var(--accent);border:2px solid var(--accent);box-shadow:none" onclick="togAddCpt()">＋ Ajouter un compte</button>
 <div id="addCptForm" style="display:none;margin-top:12px">
@@ -244,39 +319,11 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="fld"><label>Solde du jour</label><input type="number" step="0.01" id="acSolde" placeholder="0.00"></div>
 <button class="btn-engage" onclick="addCompte()">Ajouter</button>
 </div></div>
-</div>
 
-<!-- ENVIES -->
-<div class="page" id="p3">
-<div class="hdr"><h1>Récompenses</h1><p>Simulateur de dépenses plaisir<span class="tip-i" data-i="envies">i</span></p></div>
-<div class="rw-rest-lbl">Budget extras disponible</div>
-<div class="rw-rest" id="rwRest">-- €</div>
-<div id="rwList"></div>
-<button class="btn-engage" id="btnEngage" disabled onclick="doEngage()">Valider ces dépenses</button>
-<div class="card" style="margin-top:14px" id="engCard"><div class="card-t">Engagements en cours</div><div id="engList"></div></div>
-</div>
-
-<!-- COURBES -->
-<div class="page" id="p4">
-<div class="hdr"><h1>Évolution</h1><p>Suivi dans le temps</p></div>
-<div class="card"><div class="card-t">Dépenses totales par mois<span class="tip-i" data-i="chtot">i</span></div><div class="chart-wrap"><canvas id="chartTotal"></canvas></div></div>
-<div class="card"><div class="card-t">Épargne : réel et projection<span class="tip-i" data-i="chep">i</span></div><div class="chart-wrap"><canvas id="chartEpargne"></canvas></div></div>
-</div>
-
-<!-- SCORE -->
-<div class="page" id="p5">
-<div class="hdr"><h1>Discipline</h1><p>Score mensuel<span class="tip-i" data-i="score">i</span></p></div>
-<div class="sc-card"><div class="sc-circ"><svg viewBox="0 0 130 130"><circle class="sc-trk" cx="65" cy="65" r="54"/><circle class="sc-fl" id="scFl" cx="65" cy="65" r="54" stroke-dasharray="339.3" stroke-dashoffset="339.3"/></svg><div class="sc-v" id="scV">--</div></div><div class="sc-lbl" id="scLbl">Importe un CSV</div></div>
-<div class="card"><div class="card-t">Critères</div>
-<div class="row"><div class="row-l">Trajectoire du mois</div><div class="row-v" id="sc1">--</div></div>
-<div class="row"><div class="row-l">Import régulier</div><div class="row-v" id="sc2">--</div></div>
-<div class="row"><div class="row-l">Épargne du mois précédent</div><div class="row-v" id="sc3">--</div></div>
-<div class="row"><div class="row-l">Pas de découvert</div><div class="row-v" id="sc4">--</div></div>
-</div>
 </div>
 
 <!-- RÈGLES -->
-<div class="page" id="p6">
+<div class="page" id="pRegles">
 <div class="hdr"><h1>Règles</h1><p>Le contrat — verrou intelligent sur les cibles</p></div>
 <div class="card"><div class="card-t">Cibles en vigueur<span class="tip-i" data-i="cibles">i</span></div><div id="ciblesList"></div></div>
 <div class="card"><div class="card-t">Demandes en cours<span class="tip-i" data-i="pending">i</span></div><div id="pendList"></div></div>
@@ -288,28 +335,30 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 </div>
 <div class="card"><div class="card-t">Journal des modifications<span class="tip-i" data-i="journal">i</span></div><div id="journalList"></div></div>
 <div class="card">
-<div class="rule-block"><div class="rule-cat">🎯 Cible : 4 400 €/mois toutes dépenses</div><div class="rule-desc">Le foyer gagne environ 5 300 €/mois. Dépenser 4 400 € maximum = 900 € d'épargne mensuelle. C'est LE chiffre que surveille l'appli : le total, pas seulement les extras.</div></div>
-<div class="rule-block"><div class="rule-cat">🔁 Virements internes neutralisés</div><div class="rule-desc">Les virements entre vos comptes (Paul, Claire, commun, Livret A) ne sont ni des revenus ni des dépenses. L'appli les détecte et les exclut de tous les calculs.</div></div>
-<div class="rule-block"><div class="rule-cat">💰 Revenus</div><div class="rule-desc">Salaires Paul et Claire, CAF, remboursements CPAM et prévoyance. Détaillés ligne par ligne.</div></div>
-<div class="rule-block"><div class="rule-cat">🔒 Charges fixes — ≈ 2 450 €/mois</div><div class="rule-desc">Emprunts, assurances, télécom, énergie, eau, impôts, CESU, école, cotisations bancaires, salle de sport, prévoyance. Suivies mais non plafonnées : elles ne bougent qu'en résiliant.</div></div>
-<div class="rule-block"><div class="rule-cat">🥖 Courses — 1 000 €/mois</div><div class="rule-desc">Alimentation : supermarchés, boulangerie, boucherie, marché.</div></div>
-<div class="rule-block"><div class="rule-cat">⛽ Carburant — 220 €/mois</div><div class="rule-desc">Trajets domicile-travail et déplacements courants.</div></div>
-<div class="rule-block"><div class="rule-cat">🩺 Santé — 150 €/mois provisionné</div><div class="rule-desc">Médecins, pharmacie, psy (chèques), suivi fertilité. Cumulable.</div></div>
-<div class="rule-block"><div class="rule-cat">🔨 Travaux — 200 €/mois provisionné</div><div class="rule-desc">Bricolage et entretien maison courant. Cumulable. Les travaux fissures ont leur circuit à part, hors appli.</div></div>
-<div class="rule-block"><div class="rule-cat">📱 Abonnements — 80 €/mois</div><div class="rule-desc">Toutes les dépenses numériques récurrentes et frais CB internationales associés. Chaque doublon détecté est signalé dans À faire.</div></div>
-<div class="rule-block"><div class="rule-cat">💎 Extras — 300 €/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire ce mois-ci : restos, cafés, spa, coiffeur, beauté, shopping, sorties, jardinerie, tabac, retraits, PayPal non identifié, dons ponctuels.</div></div>
-<div class="rule-block"><div class="rule-cat">🐷 Épargne — 900 €/mois</div><div class="rule-desc">L'objectif. Chaque euro sous la cible de dépenses est un euro d'épargne. L'appli affiche en permanence la date à laquelle chaque palier (30 000, 40 000, 50 000 €) sera atteint à ton rythme réel.</div></div>
-<div class="rule-block"><div class="rule-cat">⚖️ Le principe</div><div class="rule-desc">L'appli extrapole ta trajectoire dès le début du mois et t'alerte quand il est encore temps d'agir — pas le 31. Les cibles se modifient uniquement par le verrou intelligent ci-dessus : durcir est immédiat, adoucir attend 72 h ou l'accord de l'autre. Toute modification est journalisée.</div></div>
+<div class="rule-block"><div class="rule-cat">🎯 Cible : 4 400 €/mois toutes dépenses</div><div class="rule-desc">Le foyer gagne ~5 300 €/mois. Dépenser 4 400 € max = 900 € de côté chaque mois. L'appli surveille CE chiffre : le total.</div></div>
+<div class="rule-block"><div class="rule-cat">🔁 Virements internes neutralisés</div><div class="rule-desc">Un virement entre vos comptes n'est ni un revenu ni une dépense. L'appli les repère et les ignore.</div></div>
+<div class="rule-block"><div class="rule-cat">💰 Revenus</div><div class="rule-desc">Salaires, CAF, remboursements CPAM et prévoyance. Ligne par ligne.</div></div>
+<div class="rule-block"><div class="rule-cat">🔒 Charges fixes — ≈ 2 450 €/mois</div><div class="rule-desc">Emprunts, assurances, énergie, impôts, école, CESU… Suivies, pas plafonnées : ça ne bouge qu'en résiliant.</div></div>
+<div class="rule-block"><div class="rule-cat">🥖 Courses — 1 000 €/mois</div><div class="rule-desc">Supermarchés, boulangerie, boucherie, marché.</div></div>
+<div class="rule-block"><div class="rule-cat">⛽ Carburant — 220 €/mois</div><div class="rule-desc">Trajets travail et déplacements courants.</div></div>
+<div class="rule-block"><div class="rule-cat">🩺 Santé — 150 €/mois provisionné</div><div class="rule-desc">Médecins, pharmacie, psy, fertilité. Ce qui n'est pas dépensé reste dispo.</div></div>
+<div class="rule-block"><div class="rule-cat">🔨 Travaux — 200 €/mois provisionné</div><div class="rule-desc">Bricolage et entretien courant. Les travaux fissures ont leur circuit à part, hors appli.</div></div>
+<div class="rule-block"><div class="rule-cat">📱 Abonnements — 80 €/mois</div><div class="rule-desc">Tout le numérique qui se prélève chaque mois. Les doublons remontent dans Optimisations.</div></div>
+<div class="rule-block"><div class="rule-cat">💎 Extras — 300 €/mois pour deux</div><div class="rule-desc">Tout ce qu'on pourrait ne pas faire : restos, spa, coiffeur, shopping, sorties, tabac, retraits, PayPal…</div></div>
+<div class="rule-block"><div class="rule-cat">🐷 Épargne — 900 €/mois</div><div class="rule-desc">L'objectif. Chaque euro non dépensé est un euro de côté. L'appli affiche la date de chaque palier à TON rythme réel.</div></div>
+<div class="rule-block"><div class="rule-cat">⚖️ Le principe</div><div class="rule-desc">L'appli t'alerte quand il est encore temps d'agir — pas le 31. Les cibles changent par le verrou : durcir = tout de suite, adoucir = 72 h ou l'accord de l'autre. Tout est noté au journal.</div></div>
 </div>
+
 </div>
 
 <nav class="nav">
-<div class="nav-tab active" data-p="p1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Budget</div>
-<div class="nav-tab" data-p="p2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import</div>
-<div class="nav-tab" data-p="p3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Envies</div>
-<div class="nav-tab" data-p="p4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Courbes</div>
-<div class="nav-tab" data-p="p5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Score</div>
-<div class="nav-tab" data-p="p6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Règles</div>
+<div class="nav-tab active" data-p="pSuivi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Suivi</div>
+<div class="nav-tab" data-p="pMois"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Mois</div>
+<div class="nav-tab" data-p="pOptim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Optim</div>
+<div class="nav-tab" data-p="pEnvies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Envies</div>
+<div class="nav-tab" data-p="pSimu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="12" r="3"/></svg>Simu</div>
+<div class="nav-tab" data-p="pComptes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Comptes</div>
+<div class="nav-tab" data-p="pRegles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Règles</div>
 </nav>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -357,13 +406,13 @@ const ACTIONS_INIT=[
 {t:"Talons de chèques (psy)",w:"Carnet de chèques",d:false}
 ];
 /* Libellés d'abonnements/récurrences optimisables (regroupés par le label de catégorisation) */
-const OPTIM_LABELS=['Amazon Prime','Amazon Music','Amazon Media','Amazon Digital','Amazon Kindle','Audible','Numérique','Streaming','Frais bancaires','Vélo Decathlon','Salle sport'];
+const OPTIM_LABELS=['Amazon Prime','Amazon Music','Amazon Media','Amazon Digital','Amazon Kindle','Audible','Claude.ai','ElevenLabs','Streaming','Frais bancaires','Vélo Decathlon','Salle sport'];
 
 /* ================= CATÉGORISATION ================= */
 const R=[
 {p:/DRFIP|REMUNERATION/i,c:'rev',l:'Salaire'},{p:/CAF /i,c:'rev',l:'CAF'},{p:/CPAM/i,c:'rev',l:'Remb. CPAM'},{p:/GIE DE PREVOYA|VIR.*PREVOYANCE/i,c:'rev',l:'Remb. prévoyance'},{p:/REM OFFRE CONFORT|REMISE COTISATION/i,c:'rev',l:'Remise cotisation'},{p:/INTERETS/i,c:'rev',l:'Intérêts livret'},
 {p:/ECH PRET|ECHEANCE DE CREDIT/i,c:'fix',l:'Emprunt'},{p:/MACIF/i,c:'fix',l:'Ass. MACIF'},{p:/MAXANCE/i,c:'fix',l:'Ass. Maxance'},{p:/AXA/i,c:'fix',l:'Ass. AXA'},{p:/BPCE ASSUR/i,c:'fix',l:'Ass. BPCE'},{p:/CE BRETAGNE PAYS DE LOIRE/i,c:'fix',l:'Prêt conso'},{p:/CEBPL/i,c:'fix',l:'Ass. CEBPL'},{p:/ASSURANT/i,c:'fix',l:'Ass. Assurant'},{p:/BOUYGUES/i,c:'fix',l:'Bouygues'},{p:/SFR/i,c:'fix',l:'SFR'},{p:/ENGIE/i,c:'fix',l:'Engie'},{p:/SAUR/i,c:'fix',l:'SAUR'},{p:/DGFIP|DIRECTION GENERALE DES FINA/i,c:'fix',l:'Impôts'},{p:/URSSAF/i,c:'fix',l:'CESU'},{p:/ECOLE.*COLLEGE|COLLEGE.*SAINT|INSTITUTION ST ANDRE|ASSOCIATION ECOLE/i,c:'fix',l:'École'},{p:/COTISATION.*CONFORT|COTISATION.*FAMIL/i,c:'fix',l:'Cotis. banque'},{p:/LAFFITTE/i,c:'fix',l:'Téléphone'},{p:/GIEPS|PRLV.*GIEPS/i,c:'fix',l:'Prévoyance'},{p:/CHUBB/i,c:'fix',l:'Ass. Chubb'},{p:/2J SPORTS/i,c:'fix',l:'Salle sport'},{p:/DECATHLON.*LOCAT/i,c:'fix',l:'Vélo Decathlon'},{p:/FORF P\.STAT|FRAIS BANCAIRES|COM CB INT/i,c:'fix',l:'Frais bancaires'},
-{p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/CLAUDE\.AI|ANTHROPIC/i,c:'abo',l:'Numérique'},{p:/ELEVENLABS/i,c:'abo',l:'Numérique'},{p:/NETFLIX|DISNEY|SPOTIFY|DEEZER|CANAL/i,c:'abo',l:'Streaming'},
+{p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/CLAUDE\.AI|ANTHROPIC/i,c:'abo',l:'Claude.ai'},{p:/ELEVENLABS/i,c:'abo',l:'ElevenLabs'},{p:/NETFLIX|DISNEY|SPOTIFY|DEEZER|CANAL/i,c:'abo',l:'Streaming'},
 {p:/INTERMARCHE|LECLERC|CARREFOUR|SUPER U|UEP ALIM|UEP DAC|SAUDIS|BOULANGE|PAIN DE LA DUCH|BOUCH ST HILAIR|JOSEPH DISTRE|AUX SAVEURS/i,c:'courses',l:'Courses'},
 {p:/TOTAL.*RELAIS|CARBURANT|PO SAUMUR|STATION/i,c:'carburant',l:'Carburant'},{p:/INTER CHALISMAR/i,c:'courses',l:'Courses/Carburant'},
 {p:/BOISSINOT|DOUAIRE|VAN OLDENEEL|MADAME FABLET|PHARMACIE|IMAGERIE|GLEMET|CARDIOLOG/i,c:'sante',l:'Santé'},{p:/ALIX MIOT/i,c:'sante',l:'Fertilité'},{p:/CHEQUE/i,c:'sante',l:'Chèque (psy)'},
@@ -396,6 +445,32 @@ let k=hashTx(t);while(seen[k]){k=k+'x'}seen[k]=1;t.k=k;
 tx.push(t)}
 return tx}
 
+/* ================= PARSEUR PAYPAL ================= */
+function isPayPalCsv(txt){return txt.slice(0,300).includes('Fuseau horaire')&&txt.slice(0,300).includes('Num\u00e9ro de transaction')}
+function ppLine(l){
+const out=[];let cur='',q=false;
+for(let i=0;i<l.length;i++){const c=l[i];
+if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}
+else if(c===','&&!q){out.push(cur);cur=''}
+else cur+=c}
+out.push(cur);return out}
+function parsePayPal(txt){
+const ls=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+const head=ppLine(ls[0]).map(h=>h.trim());
+const iD=head.indexOf('Date'),iDesc=head.indexOf('Description'),iNet=head.indexOf('Net'),iNom=head.indexOf('Nom');
+if(iD<0||iNet<0||iNom<0)return[];
+const EXCL=/Retrait par carte|Virement bancaire|Retrait initi|D\u00e9p\u00f4t sur carte|Annulation|Approvisionnement/i;
+const out=[];const seen={};
+for(let i=1;i<ls.length;i++){const c=ppLine(ls[i]);if(c.length<=iNom)continue;
+const net=parseFloat((c[iNet]||'').replace(/[\u202f\s]/g,'').replace(',','.'));
+const nom=(c[iNom]||'').trim();const desc=(c[iDesc]||'').trim();
+if(!net||net>=0||!nom||EXCL.test(desc))continue;
+const p=(c[iD]||'').split('/');const iso=p.length===3?`${p[2]}-${p[1]}-${p[0]}`:c[iD];
+const t={date:iso,nom,amt:net,desc};
+let k=hashTx({date:iso,lib:nom,amt:net});while(seen[k])k+='x';seen[k]=1;t.k=k;
+out.push(t)}
+return out}
+
 /* ================= INTERNES ================= */
 const INT_LIB=/VIREMENT VERS COMPTE CHEQUE|VIR\. VERS COMPTE CHEQUE|VIREMENT VERS LIVRET|^LIVRET A$|MADELEINE MENEY|VIREMENT DE M MENEY PAUL$|VIREMENT DE MME CLAIRE COLLIGNON/i;
 function marquerInternes(D){
@@ -414,7 +489,7 @@ return all}
 /* ================= DATA LAYER ================= */
 const FB_ON=!!FIREBASE_CONFIG.apiKey;
 const SK='budgetMeneyV2';
-let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null};
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{}};
 let fbdb=null;
 function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
 function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
@@ -432,7 +507,7 @@ firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
 firebase.auth().onAuthStateChanged(u=>{
 if(!u){document.getElementById('ovlLogin').classList.add('show');return}
 document.getElementById('ovlLogin').classList.remove('show');
-fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null};
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
 CFG=D.config;applyCfg();refresh()})})}
@@ -478,10 +553,19 @@ document.getElementById('csvInput').addEventListener('change',async e=>{
 const files=[...e.target.files];if(!files.length)return;
 let report=[];
 for(const f of files){
+const buf=await f.arrayBuffer();
+let raw=new TextDecoder('utf-8').decode(new Uint8Array(buf));
+if(isPayPalCsv(raw)){
+const ptx=parsePayPal(raw);
+const ex=D.pp||{};const b={};let nb=0;
+for(const t of ptx){if(!ex[t.k]){b[t.k]=t;nb++}}
+if(nb)writeBatch('pp',b);
+write('meta/lastImp/paypal',new Date().toISOString());
+report.push(`<div class="row"><div class="row-l">PayPal (analyse)</div><div class="row-v g">${nb} paiement(s) marchand ajout\u00e9(s) / ${ptx.length} lus</div></div>`);
+continue}
 let acc=selA;
 if(acc==='auto'){acc=null;for(const[k,c]of Object.entries(COMPTES))if(f.name.includes(c.num))acc=k;
 if(!acc){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Compte non reconnu — choisis-le manuellement</div></div>`);continue}}
-const buf=await f.arrayBuffer();
 const tx=parseCSV(new TextDecoder('iso-8859-1').decode(new Uint8Array(buf)));
 if(!tx.length){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Aucune transaction lisible</div></div>`);continue}
 const existing=D.tx[acc]||{};const batch={};let nb=0;
@@ -532,34 +616,107 @@ function togRW(el){el.classList.toggle('checked');updateRW()}
 
 /* ================= OPTIMISATIONS AUTO-DÉTECTÉES ================= */
 let OPTIM=[];
-function detecterOptimisations(){
-OPTIM=[];
-const cutoff=new Date(Date.now()-120*864e5).toISOString().slice(0,10);
-const deb=txReal().filter(t=>t.amt<0&&t.date>=cutoff&&OPTIM_LABELS.includes(t.l));
+const FAMILLES=[
+{nom:'MUSIQUE',test:t=>/^(Spotify|Amazon Music|Deezer)/i.test(t)||/YouTube Premium/i.test(t)},
+{nom:'VID\u00c9O',test:t=>/^(Netflix|Disney|Canal|Streaming|Amazon Prime$|Amazon Digital|Amazon Media)/i.test(t)||/Prime Video|YouTube Premium/i.test(t)},
+{nom:'LECTURE \u2044 AUDIO',test:t=>/^(Audible|Amazon Kindle|Kindle)/i.test(t)}
+];
+function nomAffPP(nom,mens){
+if(/GOOGLE/i.test(nom))return Math.abs(mens-21.99)<3?'YouTube Premium (via Google, inclut YouTube Music)':'Abonnement Google '+fs(mens)+'/mois';
+if(/SPOTIFY/i.test(nom))return'Spotify';
+if(/NETFLIX/i.test(nom))return'Netflix';
+if(/MCAFEE/i.test(nom))return'McAfee';
+return nom.length>34?nom.slice(0,34)+'\u2026':nom}
+function joursTypiques(txs){
+const js=txs.map(t=>+t.date.slice(8,10)).sort((a,b)=>a-b);
+const grp=[];for(const j of js){const g=grp.find(g=>Math.abs(g[0]-j)<=3);if(g)g.push(j);else grp.push([j])}
+return grp.filter(g=>g.length>=2).map(g=>'le '+Math.round(g.reduce((s,x)=>s+x,0)/g.length))}
+function scanRecurrences(items,getLbl,getSrc){
 const grp={};
-for(const t of deb){if(!grp[t.l])grp[t.l]=[];grp[t.l].push(t)}
+for(const t of items){const l=getLbl(t);if(!l)continue;if(!grp[l])grp[l]=[];grp[l].push(t)}
+const out=[];
 for(const[lib,txs]of Object.entries(grp)){
 const mois=new Set(txs.map(t=>t.date.slice(0,7)));
 if(mois.size<2)continue;
-const tot=txs.reduce((s,t)=>s+Math.abs(t.amt),0);
-const mens=tot/mois.size;
+const mens=txs.reduce((s,t)=>s+Math.abs(t.amt),0)/mois.size;
 if(mens<3)continue;
-const occParMois=txs.length/mois.size;
-const id='o'+lib.toLowerCase().replace(/[^a-z]/g,'');
-let t2,gain;
-if(occParMois>=1.7){gain=Math.round(mens/2*100)/100;
-t2=`${lib} : ${txs.length} prélèvements sur ${mois.size} mois (${fs(mens)}/mois) — un DOUBLON est probable. Résilier l'un des deux rapporte ${fm(gain)}/mois.`}
-else{gain=Math.round(mens*100)/100;
-t2=`${lib} : ${fm(mens)}/mois détecté dans tes relevés. Résilier si non indispensable rapporte ${fm(gain)}/mois.`}
-OPTIM.push({id,lib,t:t2,w:'Cocher = engagement que ce prélèvement est stoppé. L\u2019appli vérifie aux prochains imports.',gain,mens})}
+out.push({lib,txs,mois:mois.size,mens,occ:txs.length/mois.size,src:getSrc})}
+return out}
+function detecterOptimisations(){
+OPTIM=[];
+const cutoff=new Date(Date.now()-120*864e5).toISOString().slice(0,10);
+const banc=scanRecurrences(txReal().filter(t=>t.amt<0&&t.date>=cutoff&&OPTIM_LABELS.includes(t.l)),t=>t.l,'banc');
+const pp=scanRecurrences(Object.values(D.pp||{}).filter(t=>t.date>=cutoff),t=>t.nom,'pp')
+.filter(r=>r.occ>=0.6&&r.occ<=2.5); /* r\u00e9currences type abonnement uniquement */
+const recs=[...banc,...pp.map(r=>({...r,aff:nomAffPP(r.lib,r.mens)}))];
+/* Clusters de montants : s\u00e9parer les flux distincts d'un m\u00eame groupe */
+function clustersMontants(txs){
+const cl=[];
+for(const t of txs){const a=Math.abs(t.amt);
+const c=cl.find(c=>Math.abs(c.m-a)/Math.max(c.m,a)<0.12);
+if(c){c.n++;c.m=(c.m*(c.n-1)+a)/c.n;c.txs.push(t)}else cl.push({m:a,n:1,txs:[t]})}
+return cl.filter(c=>c.n>=2).sort((a,b)=>b.m-a.m)}
+for(const r of recs){
+const aff=r.aff||r.lib;const via=r.src==='pp'?' (pay\u00e9 via PayPal, invisible sur le relev\u00e9 bancaire)':'';
+const id='o'+(r.src+r.lib).toLowerCase().replace(/[^a-z]/g,'').slice(0,40);
+const w='Cocher = c\u2019est stopp\u00e9. L\u2019appli v\u00e9rifiera aux prochains imports.';
+/* Cas sp\u00e9cial : commissions bancaires, pas un abonnement */
+if(r.lib==='Frais bancaires'){
+OPTIM.push({id,lib:r.lib,src:r.src,gain:Math.round(r.mens*100)/100,mens:r.mens,
+t:`Commissions bancaires : ${fs(r.mens)}/mois, surtout des frais CB sur paiements hors zone euro (Temu, sites \u00e9trangers\u2026). Payer en euros ou \u00e9viter ces sites = jusqu'\u00e0 ${fm(r.mens)}/mois de gagn\u00e9s.`,
+w:'Cocher = j\u2019arr\u00eate les paiements en devise. L\u2019appli v\u00e9rifiera.'});continue}
+if(r.occ>=1.7){
+const cls=clustersMontants(r.txs);
+if(cls.length>=2){
+/* Plusieurs flux distincts sous le m\u00eame nom : les d\u00e9tailler */
+const detail=cls.map(c=>{const j=joursTypiques(c.txs);return`${fm(c.m)}${j.length?' ('+j[0]+')':''}`}).join(' + ');
+const minM=Math.min(...cls.map(c=>c.m));
+OPTIM.push({id,lib:r.lib,src:r.src,gain:Math.round(minM*100)/100,mens:r.mens,
+t:`${aff} : ${cls.length} pr\u00e9l\u00e8vements distincts chaque mois : ${detail} = ${fs(r.mens)}/mois${via}. Plusieurs services ou formules en parall\u00e8le. R\u00e9silier le moins utile = au moins ${fm(minM)}/mois de gagn\u00e9s.`,w})}
+else{
+const jours=joursTypiques(r.txs);const jtxt=jours.length>=2?` ${jours.join(' et ')},`:'';
+OPTIM.push({id,lib:r.lib,src:r.src,gain:Math.round(r.mens/2*100)/100,mens:r.mens,
+t:`${aff} : pr\u00e9lev\u00e9 ${Math.round(r.occ)} fois par mois${jtxt ? ' \u2014'+jtxt+' m\u00eame montant':''} soit ${fs(r.mens)}/mois${via}. Le M\u00caME abonnement pay\u00e9 deux fois \u2014 s\u00fbrement sur deux comptes. R\u00e9silier l'un des deux = ${fm(r.mens/2)}/mois de gagn\u00e9s.`,w})}}
+else{
+OPTIM.push({id,lib:r.lib,src:r.src,gain:Math.round(r.mens*100)/100,mens:r.mens,aff,
+t:`${aff} : ${fm(r.mens)}/mois${via}. Vraiment utile ? R\u00e9silier = ${fm(r.mens)}/mois de gagn\u00e9s.`,w})}}
+/* Doublons fonctionnels inter-plateformes : m\u00eame besoin pay\u00e9 plusieurs fois */
+for(const fam of FAMILLES){
+const membres=OPTIM.filter(o=>o.src!=='fam'&&fam.test(o.aff||o.lib));
+if(membres.length>=2){
+const tot=membres.reduce((s,m)=>s+m.mens,0);
+const maxM=Math.max(...membres.map(m=>m.mens));
+const gain=Math.round((tot-maxM)*100)/100;
+const liste=membres.map(m=>`${m.aff||m.lib} (${fs(m.mens)}/mois)`).join(' + ');
+OPTIM.push({id:'ofam'+fam.nom.toLowerCase().replace(/[^a-z]/g,''),lib:'FAM:'+fam.nom,src:'fam',gain,mens:tot,libs:membres.map(m=>m.lib),
+t:`${fam.nom} pay\u00e9e ${membres.length} fois : ${liste} = ${fs(tot)}/mois au total. Un seul suffit. N'en garder qu'un = jusqu'\u00e0 ${fm(gain)}/mois de gagn\u00e9s.`,
+w:'Cocher = un seul service gard\u00e9, les autres r\u00e9sili\u00e9s. L\u2019appli v\u00e9rifiera.'});
+/* retirer les gains individuels des membres pour ne pas compter double */
+for(const m of membres)m.dansFamille=true}}
 OPTIM.sort((a,b)=>b.gain-a.gain)}
 function etatOptim(id){return(D.actionsEtat||{})[id]||null}
 function optimRelapse(o,etat){
 if(!etat||!etat.d)return false;
 const limite=new Date(new Date(etat.ts).getTime()+5*864e5).toISOString().slice(0,10);
-return txReal().some(t=>t.amt<0&&t.l===o.lib&&t.date>limite)}
+if(o.src==='banc')return txReal().some(t=>t.amt<0&&t.l===o.lib&&t.date>limite);
+if(o.src==='pp')return Object.values(D.pp||{}).some(t=>t.nom===o.lib&&t.date>limite);
+if(o.src==='fam'){
+const actifs=new Set();
+for(const lib of o.libs||[]){
+if(txReal().some(t=>t.amt<0&&t.l===lib&&t.date>limite))actifs.add(lib);
+if(Object.values(D.pp||{}).some(t=>t.nom===lib&&t.date>limite))actifs.add(lib)}
+return actifs.size>=2}
+return false}
 function gainsEngages(){
-let g=0;for(const o of OPTIM){const e=etatOptim(o.id);if(e&&e.d&&!optimRelapse(o,e))g+=o.gain}return g}
+let g=0;
+for(const o of OPTIM){
+if(o.dansFamille){/* gain compt\u00e9 via la ligne famille, pas individuellement */
+const fam=OPTIM.find(f=>f.src==='fam'&&(f.libs||[]).includes(o.lib));
+const ef=fam?etatOptim(fam.id):null;
+if(ef&&ef.d)continue; /* famille coch\u00e9e : l'individuel ne compte pas */
+}
+const e=etatOptim(o.id);if(e&&e.d&&!optimRelapse(o,e))g+=o.gain}
+return g}
 function togOptim(id){
 const e=etatOptim(id);
 write('actionsEtat/'+id,e&&e.d?null:{d:true,ts:new Date().toISOString()})}
@@ -589,13 +746,13 @@ const msg=document.getElementById('projMsg');
 const overJour=(proj-CIBLE)/lastDay;
 if(ratio<=1){box.className='proj ok';fill.style.background='#16a34a';
 const gain=REVENUS_REF-proj;
-msg.textContent=`Trajectoire tenue. Si tu finis le mois ainsi : ${fs(Math.max(0,gain))} d'épargne. Continue.`}
+msg.textContent=`Ça tient. Si tu finis comme ça : ${fs(Math.max(0,gain))} de côté ce mois-ci.`}
 else if(ratio<=1.1){box.className='proj warn';fill.style.background='#d97706';
-msg.textContent=`Dérive en cours : +${fs(proj-CIBLE)} au-dessus de la cible. Freine maintenant, pas le ${lastDay}.`}
+msg.textContent=`Ça dérape : +${fs(proj-CIBLE)} de trop. Freine maintenant, pas le ${lastDay}.`}
 else if(ratio<=1.25){box.className='proj bad';fill.style.background='#dc2626';
-msg.textContent=`Trajectoire rouge : +${Math.round((ratio-1)*100)} % au-dessus de la cible. Chaque journée à ce rythme reprend ${fs(overJour)} sur l'épargne.`}
+msg.textContent=`Rouge : +${Math.round((ratio-1)*100)} % de trop. Chaque jour comme ça coûte ${fs(overJour)} d'épargne.`}
 else{box.className='proj crit';fill.style.background='#fff';
-msg.textContent=`STOP. À ce rythme, ce mois efface ${fs(proj-CIBLE)} d'épargne. C'est exactement le mécanisme qui a consumé le don et l'assurance. Plus un achat non vital ce mois-ci.`}}
+msg.textContent=`STOP. Ce mois efface ${fs(proj-CIBLE)} d'épargne. C'est comme ça que le don et l'assurance ont disparu. Plus un achat non vital.`}}
 function updateTraj(){
 const box=document.getElementById('trajBox');
 const main=document.getElementById('trajMain');
@@ -607,17 +764,17 @@ const ep=epargneActuelle();let net=netMensuelMoyen();
 if(ep===null||net===null){box.className='traj';main.textContent='Saisis les soldes de départ et importe au moins un mois de CSV.';return}
 const gTraj=gainsEngages();net+=gTraj;
 if(net>=50){box.className='traj up';document.getElementById('trajLbl').textContent='Trajectoire d\u2019épargne — ça monte';
-main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · rythme réel : <span class="mono">+${fs(net)}/mois</span>`;
+main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · tu mets de côté <span class="mono">+${fs(net)}/mois</span>`;
 const targets=[];let t=Math.ceil(ep/10000)*10000;for(let i=0;i<3;i++){targets.push(t);t+=10000}
 jal.innerHTML=targets.map(tg=>{const months=(tg-ep)/net;const d=new Date();d.setMonth(d.getMonth()+Math.ceil(months));
 return`<div class="jalon"><span>${fs(tg)}</span><span class="jd">${d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span></div>`}).join('');
-note.textContent=net>=EPARGNE_CIBLE?`Objectif de ${fs(EPARGNE_CIBLE)}/mois tenu. Les 25 000 € des travaux seront reconstitués largement avant l'échéance.`:`Bien, mais sous l'objectif de ${fs(EPARGNE_CIBLE)}/mois. Au rythme cible, chaque palier arriverait ${Math.round((1-net/EPARGNE_CIBLE)*100)} % plus vite.`}
+note.textContent=net>=EPARGNE_CIBLE?`Objectif ${fs(EPARGNE_CIBLE)}/mois tenu. Les 25 000 € des travaux seront prêts bien avant l'heure.`:`Ça monte, mais sous l'objectif de ${fs(EPARGNE_CIBLE)}/mois. En tenant la cible, les paliers arrivent plus vite.`}
 else if(net<=-50){box.className='traj down';document.getElementById('trajLbl').textContent='Alerte — l\u2019épargne fond';
-main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`;
+main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`;
 const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.floor(months));
 zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
-note.textContent=`C'est la date où il ne reste plus rien — ni pour les travaux, ni pour un imprévu. Elle recule à chaque mois tenu sous ${fs(CIBLE)}.`}
-else{box.className='traj';main.innerHTML=`Épargne du foyer : <span class="mono">${fs(ep)}</span> · stagnation (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès : les paliers ne seront jamais atteints à ce rythme.`}}
+note.textContent=`À cette date, il ne reste rien. Ni pour les travaux, ni pour un imprévu. Chaque mois sous ${fs(CIBLE)} repousse cette date.`}
+else{box.className='traj';main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · ça stagne (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès. À ce rythme, les paliers n'arrivent jamais.`}}
 function updateEnv(){
 const mtx=txMonth(curMonth());
 const defs=[['courses','Courses',ENV.courses],['carburant','Carburant',ENV.carburant],['sante','Santé',ENV.sante],['trav','Travaux',ENV.trav],['abo','Abonnements',ENV.abo],['ext','Extras',ENV.ext]];
@@ -651,10 +808,11 @@ const todoStat=keys.filter(k=>!acts[k].d).length;
 const todoOpt=OPTIM.filter(o=>{const e=etatOptim(o.id);return!(e&&e.d)||optimRelapse(o,e)}).length;
 const g=gainsEngages();
 document.getElementById('actN').textContent=todoStat+todoOpt;
+const tabO=document.querySelector('[data-p="pOptim"]');if(tabO)tabO.style.color=(todoStat+todoOpt)>0?'var(--orange)':'';
 document.getElementById('actP').style.display=(todoStat+todoOpt+OPTIM.length)?'block':'none';
-document.getElementById('actGains').innerHTML=g>0?`Économies engagées : <b>+${fm(g)}/mois</b> — déjà intégrées à ta projection et à ta trajectoire d'épargne.`:'';
+document.getElementById('actGains').innerHTML=g>0?`Économies engagées : <b>+${fm(g)}/mois</b> — déjà comptées dans ta projection.`:'';
 const htmlOpt=OPTIM.map(o=>{const e=etatOptim(o.id);const done=e&&e.d;const rel=done&&optimRelapse(o,e);
-return`<div class="act-i"><div class="act-ck ${done&&!rel?'done':''}" onclick="togOptim('${o.id}')">${done&&!rel?'✓':''}</div><div><div class="act-txt">${o.t}${rel?' <span style="color:#dc2626;font-weight:800">⚠ TOUJOURS PRÉLEVÉ après ton engagement — gain annulé. Décoche, résilie vraiment, recoche.</span>':''}${done&&!rel?` <span style="color:#16a34a;font-weight:800">+${fm(o.gain)}/mois</span>`:''}</div><div class="act-w">${o.w}</div></div></div>`}).join('');
+return`<div class="act-i"><div class="act-ck ${done&&!rel?'done':''}" onclick="togOptim('${o.id}')">${done&&!rel?'✓':''}</div><div><div class="act-txt">${o.t}${rel?' <span style="color:#dc2626;font-weight:800">⚠ TOUJOURS PRÉLEVÉ. Gain repris. Résilie pour de vrai, puis recoche.</span>':''}${done&&!rel?` <span style="color:#16a34a;font-weight:800">+${fm(o.gain)}/mois</span>`:''}</div><div class="act-w">${o.w}</div></div></div>`}).join('');
 const htmlStat=keys.map(k=>{const a=acts[k];
 return`<div class="act-i"><div class="act-ck ${a.d?'done':''}" onclick="togA('${k}')">${a.d?'✓':''}</div><div><div class="act-txt">${a.t}</div><div class="act-w">${a.w}</div></div></div>`}).join('');
 document.getElementById('actL').innerHTML=htmlOpt+htmlStat}
@@ -663,12 +821,12 @@ function updateAlertImport(){
 const el=document.getElementById('alertB');
 const stamps=Object.values(D.meta&&D.meta.lastImp||{});
 const last=stamps.length?Math.max(...stamps.map(s=>+new Date(s))):null;
-if(!last){el.className='alert danger';el.textContent='Aucun import. L\u2019appli est aveugle — et toi aussi.';
+if(!last){el.className='alert danger';el.textContent='Aucun import. L\u2019appli ne voit rien — et toi non plus.';
 document.getElementById('lastImp').textContent='aucun';return}
 const days=(Date.now()-last)/864e5;
 document.getElementById('lastImp').textContent=new Date(last).toLocaleDateString('fr-FR')+' ('+Math.floor(days)+' j)';
-if(days>14){el.className='alert over';el.textContent=`${Math.floor(days)} jours sans import. C\u2019est exactement comme ça que 54 000 € ont disparu sans que personne ne le voie. Importe. Maintenant.`}
-else if(days>7){el.className='alert danger';el.textContent=`${Math.floor(days)} jours sans import. La surveillance ne vaut que si elle est nourrie chaque semaine.`}
+if(days>14){el.className='alert over';el.textContent=`${Math.floor(days)} jours sans import. C\u2019est comme ça que 54 000 € ont disparu sans que personne ne voie rien. Importe. Maintenant.`}
+else if(days>7){el.className='alert danger';el.textContent=`${Math.floor(days)} jours sans import. Un import par semaine, sinon l\u2019appli ne sert à rien.`}
 else el.className='alert'}
 function updateScore(){
 const mtx=txMonth(curMonth());const spent=depOf(mtx);
@@ -777,6 +935,14 @@ const durci=e.type&&e.type.startsWith('durciss');
 const qui=e.par==='local'?'':((e.par===userEmail()?'toi':e.par)+' · ');
 return`<div class="row"><div class="row-l">${lbl}<br><span style="font-weight:500;color:var(--text-muted);font-size:11px">${qui}${new Date(e.ts).toLocaleDateString('fr-FR')} · ${e.type}</span></div><div class="row-v ${durci?'g':'o'}">${fs(e.ov)} → ${fs(e.nv)}</div></div>`}).join('')}
 
+/* ================= EXPORT JSON ================= */
+function exportJson(){
+const dump={exportDate:new Date().toISOString(),app:'budget-meney',user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,tx:D.tx};
+const blob=new Blob([JSON.stringify(dump,null,1)],{type:'application/json'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+a.download='budget-export-'+new Date().toISOString().slice(0,10)+'.json';
+document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href)}
+
 /* ================= ADMIN COMPTES ================= */
 function updateCptAdmin(){
 const el=document.getElementById('cptAdmin');
@@ -800,29 +966,167 @@ write('etat/datesSoldes/'+id,new Date().toISOString().slice(0,10));
 document.getElementById('addCptForm').style.display='none';
 ['acLbl','acNum','acSolde'].forEach(i=>document.getElementById(i).value='')}
 
+/* ================= SIMULATION ================= */
+let chSim=null;let simCourant=null;
+function simulerTrajectoire(dx,nmois,ponctuel,moisP,horizon){
+const ep0=epargneActuelle();const net=netMensuelMoyen();
+if(ep0===null||net===null)return null;
+const g=gainsEngages();const base=net+g;
+const ref=[],sim=[];let vr=ep0,vs=ep0;
+for(let m=1;m<=horizon;m++){
+vr+=base;ref.push(vr);
+let add=base+((nmois==null||m<=nmois)?dx:0);
+if(ponctuel&&m===moisP)add+=ponctuel;
+vs+=add;sim.push(vs)}
+return{ep0,base,ref,sim}}
+function dateJalon(serie,cible,ep0){
+if(ep0>=cible)return'déjà atteint';
+for(let m=0;m<serie.length;m++)if(serie[m]>=cible){const d=new Date();d.setMonth(d.getMonth()+m+1);return d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}
+return'> 5 ans'}
+function runSim(){
+const dx=parseFloat(document.getElementById('simDx').value)||0;
+const nRaw=document.getElementById('simN').value;
+const nmois=nRaw?Math.max(1,parseInt(nRaw)):null;
+const ponctuel=parseFloat(document.getElementById('simP').value)||0;
+const moisP=Math.max(1,parseInt(document.getElementById('simPM').value)||1);
+if(!dx&&!ponctuel){alert('Renseigne au moins un effort ou un événement.');return}
+const r=simulerTrajectoire(dx,nmois,ponctuel,moisP,60);
+if(!r){alert('Il faut les soldes de départ et au moins un mois d\u2019imports.');return}
+simCourant={dx,nmois,ponctuel,moisP};
+document.getElementById('simRes').style.display='block';
+document.getElementById('btnDefi').style.display=(dx>0&&nmois&&!D.defi)?'block':'none';
+/* Verdict */
+let v='';
+if(dx>0&&nmois)v+=`Effort de ${fs(dx)}/mois pendant ${nmois} mois = <b>${fs(dx*nmois)} dégagés</b> au bout. `;
+if(dx>0&&!nmois)v+=`Effort permanent de ${fs(dx)}/mois : ton rythme passe de ${fs(r.base)} à <b>${fs(r.base+dx)}/mois</b>. `;
+if(dx<0)v+=`Relâchement de ${fs(-dx)}/mois${nmois?' pendant '+nmois+' mois':''} : ça coûte <b>${fs(-dx*(nmois||12))}${nmois?'':'/an'}</b>. `;
+if(ponctuel<0)v+=`L'achat de ${fs(-ponctuel)} dans ${moisP} mois est ${r.sim[moisP-1]>0?'absorbable':'<b style="color:var(--red)">IMPOSSIBLE sans passer sous zéro</b>'}. `;
+if(ponctuel>0)v+=`Rentrée de ${fs(ponctuel)} dans ${moisP} mois intégrée. `;
+document.getElementById('simVerdict').innerHTML=v;
+/* Jalons avant/après */
+const cibles=[];let t=Math.ceil(r.ep0/10000)*10000;for(let i=0;i<3;i++){cibles.push(t);t+=10000}
+document.getElementById('simJalons').innerHTML=cibles.map(c=>{
+const av=dateJalon(r.ref,c,r.ep0),ap=dateJalon(r.sim,c,r.ep0);
+return`<div class="sim-jal"><span>${fs(c)}</span><span><span class="avant">${av}</span><span class="apres">${ap}</span></span></div>`}).join('');
+/* Chart */
+const labels=[];for(let m=1;m<=60;m++){const d=new Date();d.setMonth(d.getMonth()+m);labels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)}
+if(chSim)chSim.destroy();
+chSim=new Chart(document.getElementById('chartSim'),{type:'line',data:{labels,datasets:[
+{data:r.ref,borderColor:'#8b91ad',borderWidth:2,borderDash:[6,5],pointRadius:0,tension:.2,label:'Sans rien changer'},
+{data:r.sim,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.07)',fill:true,borderWidth:2.5,pointRadius:0,tension:.2,label:'Avec le scénario'}]},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{family:'Outfit',size:10},boxWidth:14}}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'JetBrains Mono',size:9}}},x:{grid:{display:false},ticks:{font:{family:'Outfit',size:9},maxTicksLimit:6}}}}})}
+function runObj(){
+const cible=parseFloat(document.getElementById('objM').value)||0;
+const n=Math.max(1,parseInt(document.getElementById('objN').value)||0);
+const el=document.getElementById('objRes');
+const ep0=epargneActuelle();const net=netMensuelMoyen();
+if(!cible||!n||ep0===null||net===null){el.textContent='Renseigne le montant et le délai (et importe des CSV).';return}
+const base=net+gainsEngages();
+const requis=(cible-ep0)/n;
+const effort=requis-base;
+if(cible<=ep0){el.innerHTML=`Tu as déjà ${fs(ep0)} : objectif atteint.`;return}
+if(effort<=0)el.innerHTML=`${fs(cible)} dans ${n} mois : il faut ${fs(requis)}/mois de côté. Ton rythme actuel (${fs(base)}/mois) <b style="color:var(--green)">suffit déjà</b> — tu y seras même en avance.`;
+else el.innerHTML=`${fs(cible)} dans ${n} mois : il faut mettre <b>${fs(requis)}/mois</b> de côté, soit <b>${fs(effort)}/mois de plus</b> qu'aujourd'hui. Concrètement : dépenser au maximum <b>${fs(REVENUS_REF-requis)}/mois</b>. ${effort>1500?'<span style="color:var(--red)">Très dur à ce délai — allonge, ou combine avec une rentrée.</span>':effort>500?'Exigeant mais jouable si les Optimisations sont faites.':'Tout à fait tenable.'}`}
+function saveScenario(){
+if(!simCourant){alert('Lance d\u2019abord une simulation.');return}
+const nom=document.getElementById('simNom').value.trim()||'Scénario sans nom';
+write('scenarios/s'+Date.now(),Object.assign({nom,par:userEmail(),ts:Date.now()},simCourant));
+document.getElementById('simNom').value=''}
+function loadScenario(id){
+const s=(D.scenarios||{})[id];if(!s)return;
+document.getElementById('simDx').value=s.dx||'';
+document.getElementById('simN').value=s.nmois||'';
+document.getElementById('simP').value=s.ponctuel||'';
+document.getElementById('simPM').value=s.moisP||'';
+runSim()}
+function delScenario(id){write('scenarios/'+id,null)}
+function updateScen(){
+const el=document.getElementById('scenList');if(!el)return;
+const ss=Object.entries(D.scenarios||{}).sort((a,b)=>b[1].ts-a[1].ts);
+if(!ss.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun scénario. Simule, nomme, sauvegarde : Claire le verra aussi.</div>';return}
+el.innerHTML=ss.map(([id,s])=>{
+const desc=[s.dx?`${s.dx>0?'+':''}${fs(s.dx)}/mois${s.nmois?' \u00d7'+s.nmois+' mois':''}`:'',s.ponctuel?`${s.ponctuel>0?'+':''}${fs(s.ponctuel)} au mois ${s.moisP}`:''].filter(Boolean).join(' · ');
+return`<div class="row"><div class="row-l">${s.nom}<br><span style="font-weight:500;color:var(--text-muted);font-size:11px">${desc} · ${s.par===userEmail()?'toi':s.par}</span></div><div class="row-v"><span style="cursor:pointer;color:var(--accent);margin-right:12px" onclick="loadScenario('${id}')">▶</span><span style="cursor:pointer;color:var(--text-muted)" onclick="delScenario('${id}')">✕</span></div></div>`}).join('')}
+
+/* ================= DÉFI ENGAGEABLE ================= */
+function moisSuivant(){const d=new Date();d.setMonth(d.getMonth()+1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+function addMois(mk,n){const d=new Date(+mk.slice(0,4),+mk.slice(5,7)-1+n,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+function engagerDefi(){
+if(!simCourant||!(simCourant.dx>0)||!simCourant.nmois){alert('Simule d\u2019abord un effort positif \u00e0 dur\u00e9e d\u00e9finie.');return}
+if(D.defi){alert('Un d\u00e9fi est d\u00e9j\u00e0 en cours. Un seul \u00e0 la fois : termine-le ou abandonne-le d\u2019abord.');return}
+const dx=simCourant.dx,duree=simCourant.nmois;
+if(!confirm(`Tu t'engages : d\u00e9penses \u2264 ${Math.round(CIBLE-dx)} \u20ac/mois pendant ${duree} mois, \u00e0 partir du mois prochain. Objectif : ${Math.round(dx*duree)} \u20ac d\u00e9gag\u00e9s. Claire le verra. On y va ?`))return;
+write('defi',{dx,duree,debut:moisSuivant(),cibleMens:Math.round((CIBLE-dx)*100)/100,par:userEmail(),ts:Date.now()})}
+function cloreDefi(statut,bilan){
+const d=D.defi;if(!d)return;
+write('defisHisto/h'+Date.now(),Object.assign({},d,{statut,bilan,fin:Date.now()}));
+write('defi',null)}
+function updateDefi(){
+const card=document.getElementById('defiCard');const body=document.getElementById('defiBody');
+const d=D.defi;
+const histo=Object.values(D.defisHisto||{}).sort((a,b)=>b.fin-a.fin).slice(0,3);
+if(!d&&!histo.length){card.style.display='none';return}
+card.style.display='block';
+let html='';
+if(d){
+const curMk=curMonth();
+const moisDefi=[];for(let i=0;i<d.duree;i++)moisDefi.push(addMois(d.debut,i));
+const ecoules=moisDefi.filter(m=>m<curMk);
+const degage=ecoules.reduce((s,m)=>s+(CIBLE-depOf(txMonth(m))),0);
+const obj=d.dx*d.duree;
+if(d.debut>curMk){
+html+=`<div style="font-size:13px;font-weight:700;line-height:1.5">D\u00e9fi arm\u00e9 : \u2264 <span style="font-family:'JetBrains Mono',monospace">${fs(d.cibleMens)}</span>/mois pendant ${d.duree} mois. D\u00e9part le 1er du mois prochain. Objectif : <b>${fs(obj)} d\u00e9gag\u00e9s</b>.</div>`}
+else{
+html+=`<div style="font-size:13px;font-weight:700;margin-bottom:8px">\u2264 ${fs(d.cibleMens)}/mois \u00b7 ${ecoules.length}/${d.duree} mois \u00e9coul\u00e9s \u00b7 d\u00e9gag\u00e9 : <span style="color:${degage>=d.dx*ecoules.length?'var(--green)':'var(--red)'}">${fs(degage)}</span> / objectif ${fs(obj)}</div>`;
+html+=moisDefi.map(m=>{
+if(m>curMk)return`<div class="row"><div class="row-l">${m}</div><div class="row-v" style="color:var(--text-muted)">\u00e0 venir</div></div>`;
+const dep=depOf(txMonth(m));
+if(m===curMk)return`<div class="row"><div class="row-l">${m} (en cours)</div><div class="row-v ${dep<=d.cibleMens?'g':'rd'}">${fs(dep)} / ${fs(d.cibleMens)}</div></div>`;
+const ok=dep<=d.cibleMens;
+return`<div class="row"><div class="row-l">${m}</div><div class="row-v ${ok?'g':'rd'}">${ok?'\u2713 tenu':'\u2717 rat\u00e9'} \u00b7 ${fs(dep)}</div></div>`}).join('');
+if(ecoules.length>=d.duree){
+const reussi=degage>=obj;
+html+=`<div style="font-size:13px;font-weight:800;margin-top:10px;color:${reussi?'var(--green)':'var(--red)'}">${reussi?`D\u00c9FI R\u00c9USSI : ${fs(degage)} d\u00e9gag\u00e9s. Bravo \u2014 c'est de l'\u00e9pargne r\u00e9elle.`:`D\u00e9fi termin\u00e9, objectif manqu\u00e9 : ${fs(degage)} sur ${fs(obj)}.`}</div>
+<button class="btn-engage" onclick="cloreDefi('${reussi?'reussi':'manque'}',${Math.round(degage)})">Clore le d\u00e9fi</button>`}}
+if(d&&!(d.debut<=curMonth()&&moisDefi&&false)){
+html+=`<button class="btn-engage" style="background:var(--surface);color:var(--text-muted);border:1px solid var(--border);box-shadow:none;margin-top:8px" onclick="if(confirm('Abandonner ? \u00c7a restera visible dans l\u2019historique.')){cloreDefi('abandonn\u00e9',null)}">Abandonner</button>`}}
+if(histo.length){
+html+='<div class="card-t" style="margin-top:14px">Anciens d\u00e9fis</div>'+histo.map(h=>{
+const lbl=h.statut==='reussi'?`\u2713 r\u00e9ussi \u00b7 ${fs(h.bilan)} d\u00e9gag\u00e9s`:h.statut==='manque'?`objectif manqu\u00e9 \u00b7 ${fs(h.bilan)}`:'abandonn\u00e9';
+const col=h.statut==='reussi'?'g':'rd';
+return`<div class="row"><div class="row-l">\u2264 ${fs(h.cibleMens)}/mois \u00d7 ${h.duree} mois</div><div class="row-v ${col}">${lbl}</div></div>`}).join('')}
+body.innerHTML=html}
+
 /* ================= AIDE ⓘ ================= */
 const INFOS={
-proj:"<b>Projection fin de mois.</b> Calcul : dépenses variables déjà faites ce mois-ci + (rythme quotidien moyen de tes dépenses variables sur les 3 derniers mois pleins × jours restants) + charges fixes déjà passées + charges fixes restantes estimées. Les virements internes sont exclus. Couleurs : vert = trajectoire ≤ cible · orange = dépassement ≤ 10 % · rouge = ≤ 25 % · rouge clignotant au-delà. La projection est fiable dès le 5 du mois environ ; avant, elle est indicative.",
-traj:"<b>Trajectoire d'épargne.</b> Épargne du foyer = somme des soldes reconstitués de tous les comptes (soldes de départ + toutes les opérations importées depuis, internes exclus). Rythme = moyenne de (revenus − dépenses) des 3 derniers mois pleins. S'il est positif : dates d'atteinte des paliers de 10 000 €, calculées sur TON rythme réel, pas la théorie. S'il est négatif : date exacte à laquelle l'épargne atteint zéro. Ces dates bougent à chaque import.",
-env:"<b>Enveloppes du mois.</b> Chaque dépense est classée automatiquement par son libellé bancaire (voir Règles). La barre se remplit sur le mois en cours : vert ≤ 80 % du plafond · orange ≤ 100 % · rouge au-delà. Les plafonds se modifient uniquement via le verrou intelligent de l'onglet Règles.",
-rev:"<b>Revenus du mois.</b> Toutes les entrées du mois en cours, détaillées ligne par ligne, virements internes exclus (un virement entre vos comptes n'est pas un revenu).",
-dep:"<b>Dépenses du mois.</b> Sorties du mois en cours regroupées par famille, virements internes exclus. Le total passe en rouge s'il dépasse la cible mensuelle.",
-cpt:"<b>Comptes.</b> Solde affiché = solde de départ saisi au premier lancement + toutes les opérations importées postérieures à cette date. Si un solde diverge de la réalité bancaire, c'est qu'il manque des opérations : réimporte un CSV couvrant la période manquante.",
-lastimp:"<b>Dernier import.</b> L'appli ne voit que ce que tu lui donnes. Sans import hebdomadaire, la projection et la trajectoire deviennent aveugles. Rappel à 7 jours, alarme à 14.",
-impzone:"<b>Import CSV.</b> Export depuis l'espace Caisse d'Épargne (Opérations → Télécharger CSV). Tu peux sélectionner plusieurs fichiers d'un coup. En mode Auto, le compte est reconnu par son numéro dans le nom du fichier. Les opérations déjà connues sont ignorées automatiquement : réimporter deux fois le même fichier ne crée aucun doublon, et les périodes peuvent se chevaucher sans risque.",
-impsel:"<b>Choix du compte.</b> Auto = détection par le numéro dans le nom du fichier (recommandé). Choisis un compte précis uniquement si le fichier a été renommé.",
-cptadm:"<b>Comptes suivis.</b> La liste vit dans Firebase : ajoute un compte (libellé, numéro pour la détection auto, type, solde du jour) et toute l'appli s'adapte — import, dashboard, épargne, score. Renommage par ✎. Pas de suppression : un compte fermé cesse simplement de recevoir des imports. Le solde saisi à l'ajout est daté du jour même : seules les opérations postérieures s'y ajoutent.",
-envies:"<b>Récompenses.</b> Simulateur : coche des envies, le budget extras restant se recalcule (extras du mois déjà dépensés + engagements en attente déduits). Valider crée un engagement : au prochain import, l'appli cherche la dépense correspondante par catégorie et montant, et affiche Tenu ou Dépassé (tolérance 15 %). C'est le circuit officiel du plaisir : prévu, chiffré, assumé.",
-chtot:"<b>Dépenses totales par mois.</b> Barres = total mensuel des dépenses réelles (internes exclues). Vert = sous la cible, rouge = au-dessus. Ligne pointillée = la cible.",
-chep:"<b>Épargne : réel et projection.</b> Ligne pleine = épargne reconstituée mois par mois. Ligne pointillée = projection sur 12 mois au rythme moyen des 3 derniers mois — verte si ça monte, rouge si ça fond.",
-score:"<b>Score /20.</b> Barème exact : trajectoire du mois au-dessus de la cible → −1 point par tranche de 8 % de dépassement, max −8. Import : > 7 jours → −2, > 10 jours → −4. Épargne du mois précédent : négative → −5, positive mais sous l'objectif → −2. Découvert sur un compte courant → −3. Le score se recalcule à chaque import.",
-cibles:"<b>Cibles en vigueur.</b> Les valeurs actuellement appliquées par toute l'appli (projection, enveloppes, score). Elles vivent dans Firebase, jamais dans le code : toute modification passe par le verrou ci-dessous et se journalise.",
-pending:"<b>Demandes en cours.</b> Chaque adoucissement demandé apparaît ici, chez vous deux, avec son auteur et son compte à rebours de 72 h. Trois issues : annuler (immédiat, toujours possible) · l'autre approuve depuis son téléphone (application immédiate) · le délai s'écoule ET tu confirmes (double intention : si tu ne reviens pas confirmer, rien ne change).",
-verrou:"<b>Verrou intelligent.</b> Principe Bulldog Blocker appliqué au budget. DURCIR (baisser un plafond de dépenses, monter l'objectif d'épargne) = immédiat, la vertu ne fait pas la queue. ADOUCIR = 72 h de réflexion + confirmation, ou approbation de l'autre — jamais la sienne propre. Revenus de référence et charges fixes estimées sont neutres (immédiat, ce sont des faits, pas de la discipline). Tout est journalisé dans Firebase avec auteur et date.",
-setup:"<b>Soldes de départ.</b> Le point zéro de tout : chaque solde affiché ensuite = ce chiffre + les opérations importées. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME de la saisie, sinon toutes les projections seront décalées d'autant.",
-actions:"<b>Optimisations.</b> Deux familles. (1) DÉTECTÉES : l'appli scanne tes 4 derniers mois d'imports, repère les prélèvements récurrents optimisables (abonnements, frais bancaires, locations) et les formule avec les montants réels de TES relevés — y compris les doublons probables (deux prélèvements du même service chaque mois). (2) MANUELLES : les chantiers non lisibles dans les CSV. Cocher une action détectée est un ENGAGEMENT : le gain (€/mois) s'ajoute immédiatement à ta projection et à ta trajectoire d'épargne. Mais l'appli vérifie : si le prélèvement réapparaît dans un import plus de 5 jours après ton engagement, l'action passe en TOUJOURS PRÉLEVÉ, le gain est annulé et affiché en rouge. Cocher n'est pas résilier — l'appli sait faire la différence.",
-journal:"<b>Journal des modifications.</b> Trace intégrale et non effaçable de tout changement de cible : quoi, ancienne et nouvelle valeur, qui, quand, et par quel chemin (durcissement immédiat · approuvé par l'autre · confirmé après délai). Vit dans Firebase (config/journal). Les 20 dernières entrées sont affichées, tout l'historique est conservé en base. S'il n'y a rien ici, c'est que les cibles n'ont jamais bougé — c'est très bien.",
-login:"<b>Connexion.</b> Comptes créés par Paul dans la console Firebase (Authentication → Users). Seuls vos deux emails ont accès à la base — c'est aussi cette identité qui permet l'approbation croisée du verrou."
+proj:"<b>Projection fin de mois.</b> L'appli devine où finira le mois. Le calcul : ce que tu as déjà dépensé + ton rythme habituel pour les jours qui restent + les charges fixes à venir. Les virements entre vos comptes ne comptent pas. Vert : ça passe. Orange : un peu au-dessus. Rouge : nettement au-dessus. Rouge qui clignote : très grave. Fiable à partir du 5 du mois.",
+traj:"<b>Trajectoire d'épargne.</b> Épargne = la somme de tous vos comptes. Rythme = ce que vous mettez de côté (ou perdez) par mois, en moyenne sur les 3 derniers mois. Si ça monte : l'appli donne la date de chaque palier (30 000, 40 000, 50 000 €). Si ça descend : elle donne la date où il ne restera RIEN. Ces dates bougent à chaque import.",
+env:"<b>Enveloppes du mois.</b> Chaque dépense est rangée toute seule dans sa case, d'après le libellé bancaire. La barre se remplit au fil du mois. Vert : ok. Orange : proche du plafond. Rouge : dépassé. Pour changer un plafond : onglet Règles, verrou intelligent.",
+rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne. Les virements entre vos comptes ne comptent pas : ce n'est pas un revenu.",
+dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Le total passe en rouge s'il dépasse la cible.",
+cpt:"<b>Comptes.</b> Solde affiché = solde saisi au départ + toutes les opérations importées depuis. Si un solde est faux, il manque des opérations : réimporte un CSV qui couvre la période manquante.",
+lastimp:"<b>Dernier import.</b> L'appli ne voit que ce que tu lui donnes. Un import par semaine. Rappel à 7 jours, alarme à 14.",
+impzone:"<b>Import CSV.</b> Deux types de fichiers. 1. Les CSV Caisse d'Épargne (Opérations, puis Télécharger) : l'appli reconnaît chaque compte par le numéro dans le nom du fichier. 2. Le CSV PayPal (paypal.com : Activité, puis Télécharger) : il sert à voir À TRAVERS les lignes 'PayPal' de la banque — abonnements cachés, doublons. Il ne compte pas deux fois : c'est de l'analyse, pas des dépenses en plus. Tu peux tout donner d'un coup. Ce qui est déjà connu est ignoré.",
+impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte toute seule. Choisis un compte à la main seulement si le fichier a été renommé.",
+cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
+export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
+envies:"<b>Récompenses.</b> Coche une envie : le budget extras restant se recalcule. Valide : ça devient un engagement. Au prochain import, l'appli cherche la dépense et dit si tu as tenu le montant prévu (marge de 15 %). Le plaisir prévu et chiffré, pas le plaisir subi.",
+chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. La ligne pointillée, c'est la cible.",
+chep:"<b>Épargne.</b> Ligne pleine : le passé, mois par mois. Ligne pointillée : les 12 prochains mois si tu gardes ton rythme actuel. Verte si ça monte, rouge si ça fond.",
+score:"<b>Score /20.</b> On part de 20 et on enlève des points. Mois au-dessus de la cible : jusqu'à −8. Import en retard : −2 à −4. Mois précédent qui a mangé l'épargne : −5. Découvert : −3. Le score se recalcule à chaque import.",
+cibles:"<b>Cibles en vigueur.</b> Les chiffres que toute l'appli utilise en ce moment. Ils vivent dans Firebase, pas dans le code. Pour les changer : le verrou ci-dessous. Tout changement est noté au journal.",
+pending:"<b>Demandes en cours.</b> Chaque demande d'assouplissement s'affiche ici, chez vous deux, avec un compte à rebours de 72 h. Trois sorties : tu annules (tout de suite, toujours possible) · l'autre approuve depuis son téléphone (tout de suite) · le délai passe ET tu confirmes. Si tu ne reviens pas confirmer, rien ne change.",
+verrou:"<b>Verrou intelligent.</b> DURCIR une cible (dépenser moins, épargner plus) : tout de suite. L'ADOUCIR (dépenser plus, épargner moins) : 72 h d'attente + confirmation, ou l'accord de l'autre. On n'approuve jamais sa propre demande. Tout est noté au journal, avec le nom et la date.",
+defi:"<b>Défi en cours.</b> Un engagement pris depuis l'onglet Simu : dépenser moins qu'un plafond, pendant un nombre de mois donné. Le défi démarre le 1er du mois suivant. Chaque mois passé est jugé : tenu ou raté, avec le montant. Le compteur 'dégagé' fait la somme de ce que tu as vraiment mis de côté par rapport à la cible normale. À la fin : réussi ou manqué, et ça reste dans l'historique — l'abandon aussi. Un seul défi à la fois. Claire voit tout.",
+journal:"<b>Journal.</b> La trace de chaque changement de cible : quoi, ancienne valeur, nouvelle valeur, qui, quand, comment. Rien ne s'efface. Si le journal est vide, c'est que les cibles n'ont jamais bougé — très bien.",
+actions:"<b>Optimisations.</b> L'appli croise tes relevés bancaires ET ton export PayPal sur 4 mois. Elle repère : les abonnements, les services prélevés deux fois par mois (avec les jours exacts), et les DOUBLONS entre plateformes — le même besoin payé plusieurs fois (ex. la musique via Spotify + Amazon + YouTube). Chaque ligne dit combien ça rapporte. Cocher = promettre que c'est stoppé : le gain compte tout de suite. Si le prélèvement revient aux imports suivants, la ligne passe en rouge et le gain est repris. Cocher n'est pas résilier.",
+simeffort:"<b>Effort tenu.</b> Mets un montant : combien de plus tu mets de côté chaque mois. Avec une durée : un sacrifice temporaire (3 mois de carême budgétaire). Sans durée : un changement permanent. Un montant négatif simule un relâchement — pour voir ce qu'il coûte.",
+simponct:"<b>Événement ponctuel.</b> Un achat (montant négatif) ou une rentrée d'argent (positif), placé dans le futur. L'appli dit s'il est absorbable et ce qu'il décale.",
+simres:"<b>Résultat.</b> La courbe grise pointillée : si tu ne changes rien. La courbe bleue : avec ton scénario. En dessous, chaque palier avec sa date d'avant (barrée) et d'après. Tout est calculé sur TON rythme réel des 3 derniers mois, gains d'Optimisations inclus.",
+simobj:"<b>Objectif inversé.</b> Tu donnes le but et la date, l'appli calcule l'effort. Elle dit combien mettre de côté par mois, combien dépenser au maximum, et si c'est tenable.",
+simscen:"<b>Scénarios sauvegardés.</b> Nomme un scénario et garde-le : il est partagé, Claire le voit sur son téléphone. C'est fait pour décider ensemble AVANT de dépenser. ▶ recharge le scénario, ✕ le supprime.",
+setup:"<b>Soldes de départ.</b> Le point zéro de tout. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME. Un solde faux = toutes les projections fausses d'autant.",
+login:"<b>Connexion.</b> Seuls vos deux emails ont accès. Les comptes sont créés dans la console Firebase. C'est aussi cette identité qui sert au verrou : l'appli sait qui demande et qui approuve."
 };
 function tipHtml(k){return `<span class="tip-i" data-i="${k}">i</span>`}
 let tipOpen=null;
@@ -853,15 +1157,15 @@ b.style.left=x+'px';b.style.top=Math.max(8,y)+'px';
 t.addEventListener('mouseleave',()=>{if(!tipOpen)b.classList.remove('show')},{once:true})});
 
 /* ================= NAV + REFRESH ================= */
-document.querySelectorAll('.nav-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');if(t.dataset.p==='p4')drawCharts()})});
+document.querySelectorAll('.nav-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');if(t.dataset.p==='pMois')drawCharts()})});
 function refresh(){
 if(!CFG)return;
 computeAll();
 if(!D.etat&&(FB_ON?firebase.auth().currentUser:true)){buildSetup();document.getElementById('ovlSetup').classList.add('show')}
 else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();
-if(document.getElementById('p4').classList.contains('active'))drawCharts()}
+buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();
+if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 boot();
 </script>
