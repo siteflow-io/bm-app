@@ -192,6 +192,10 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <input type="file" id="csvInput" accept=".csv"/>
 <div class="mode-badge" id="modeBadge">Mode local — non partagé</div>
 <div id="tipBubble"></div>
+<div id="majBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:190;background:var(--accent);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.2)">
+<span id="majTxt" style="font-size:12px;font-weight:700;margin-right:10px">Nouvelle version disponible</span>
+<button onclick="majVersion()" style="padding:7px 14px;border:none;border-radius:8px;background:#fff;color:var(--accent);font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer">Mettre à jour</button>
+</div>
 
 <!-- LOGIN -->
 <div class="ovl" id="ovlLogin"><div class="ovl-box">
@@ -321,6 +325,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div id="notifStatus" style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px"></div>
 <button class="btn-engage" style="margin-top:0" id="btnNotif" onclick="activerNotifs()">Activer sur cet appareil</button>
 <div id="notifDevices" style="margin-top:8px"></div>
+<div class="card-t" style="margin-top:14px">Historique des notifications<span class="tip-i" data-i="notifhisto">i</span></div>
+<div id="notifHisto" style="font-size:12px"></div>
 </div>
 <div class="card"><div class="card-t">Export de contrôle<span class="tip-i" data-i="export">i</span></div>
 <button class="btn-engage" style="margin-top:0" onclick="exportJson()">Exporter toutes les données (JSON)</button>
@@ -334,6 +340,9 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="fld"><label>Solde du jour</label><input type="number" step="0.01" id="acSolde" placeholder="0.00"></div>
 <button class="btn-engage" onclick="addCompte()">Ajouter</button>
 </div></div>
+<div class="card"><div class="card-t">Chèques — talon numérique<span class="tip-i" data-i="cheques">i</span></div><div id="chqList"></div></div>
+<div class="card"><div class="card-t">Fiabilité des données<span class="tip-i" data-i="fiab">i</span></div><div id="fiabBody"></div></div>
+<div class="card"><div class="card-t">Historique des imports<span class="tip-i" data-i="imphisto">i</span></div><div id="impHisto"></div></div>
 
 </div>
 
@@ -386,7 +395,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=5; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=7; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -462,6 +471,8 @@ const amt=(cre>0?cre:deb)||0;if(!amt)continue;
 const p=d.split('/');const iso=p.length===3?`${p[2]}-${p[1]}-${p[0]}`:d;
 const{c:ct,l}=categ(lib,full);
 const t={date:iso,dd:d,lib,full:full.trim().slice(0,120),amt,c:ct,l,sc:souscat};
+const mchq=(lib+' '+full).match(/CHEQUE\s*N[\u00b0O]?\s*\.{0,3}\s*(\d{3,})/i);
+if(mchq)t.chq=String(+mchq[1]);
 let k=hashTx(t);while(seen[k]){k=k+'x'}seen[k]=1;t.k=k;
 tx.push(t)}
 return tx}
@@ -510,7 +521,7 @@ return all}
 /* ================= DATA LAYER ================= */
 const FB_ON=!!FIREBASE_CONFIG.apiKey;
 const SK='budgetMeneyV2';
-let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{}};
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{}};
 let fbdb=null;
 function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
 function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
@@ -528,7 +539,7 @@ firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
 firebase.auth().onAuthStateChanged(u=>{
 if(!u){document.getElementById('ovlLogin').classList.add('show');return}
 document.getElementById('ovlLogin').classList.remove('show');
-fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{}};
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
 CFG=D.config;applyCfg();refresh()})})}
@@ -549,7 +560,10 @@ function fdate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long
 function curMonth(){const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`}
 function monthKey(off){const n=new Date();const d=new Date(n.getFullYear(),n.getMonth()+off,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 let ALL=[];
-function computeAll(){ALL=marquerInternes(D);marquerAnnulations()}
+function computeAll(){ALL=marquerInternes(D);
+for(const t of ALL){if(t.chq){const c=(D.cheques||{})[t._acc+'_'+t.chq];
+if(c&&c.benef){t.l='Ch\u00e8que : '+c.benef;if(c.cat)t.c=c.cat}}}
+marquerAnnulations()}
 function txReal(){return ALL.filter(t=>!t._int)}
 function txMonth(mk){return txReal().filter(t=>t.date&&t.date.startsWith(mk))}
 function depOf(list){return list.filter(t=>t.amt<0).reduce((s,t)=>s+Math.abs(t.amt),0)}
@@ -597,36 +611,69 @@ el.innerHTML=`<button class="${selA==='auto'?'on':''}" data-a="auto">Auto</butto
 document.getElementById('accSel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;selA=b.dataset.a;document.querySelectorAll('#accSel button').forEach(x=>x.classList.toggle('on',x===b))});
 document.getElementById('impZ').addEventListener('click',()=>document.getElementById('csvInput').click());
 document.getElementById('csvInput').setAttribute('multiple','');
-document.getElementById('csvInput').addEventListener('change',async e=>{
-const files=[...e.target.files];if(!files.length)return;
-let report=[];
-for(const f of files){
-const buf=await f.arrayBuffer();
+/* Traitement d'un fichier (input OU partage Android) — retourne le rapport HTML détaillé */
+const FAMN={fix:'Fixes',courses:'Courses',carburant:'Carburant',sante:'Sant\u00e9',trav:'Travaux',abo:'Abonnements',vac:'Vacances',ess:'V\u00e9hicule',ext:'Extras',rev:'Revenus'};
+function ligneTx(t){
+return`<div class="row"><div class="row-l" style="font-size:11px;line-height:1.35">${t.dd} \u00b7 <b>${t.l}</b>${t.chq?' n\u00b0'+t.chq:''}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${(t.lib||'').slice(0,34)}</span></div><div class="row-v ${t.amt<0?'rd':'g'}" style="font-size:11px">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div></div>`}
+async function traiterFichier(fname,buf){
 let raw=new TextDecoder('utf-8').decode(new Uint8Array(buf));
 if(isPayPalCsv(raw)){
 const ptx=parsePayPal(raw);
-const ex=D.pp||{};const b={};let nb=0;
-for(const t of ptx){if(!ex[t.k]){b[t.k]=t;nb++}}
-if(nb)writeBatch('pp',b);
+const ex=D.pp||{};const b={};const nouv=[];
+for(const t of ptx){if(!ex[t.k]){b[t.k]=t;nouv.push(t)}}
+if(nouv.length)writeBatch('pp',b);
 write('meta/lastImp/paypal',new Date().toISOString());
-report.push(`<div class="row"><div class="row-l">PayPal (analyse)</div><div class="row-v g">${nb} paiement(s) marchand ajout\u00e9(s) / ${ptx.length} lus</div></div>`);
-continue}
+let h=`<div style="font-size:12px;font-weight:800;margin:8px 0 4px">PayPal (analyse) \u2014 ${nouv.length} paiement(s) marchand nouveau(x) / ${ptx.length} lus</div>`;
+h+=nouv.sort((a,b2)=>b2.date.localeCompare(a.date)).map(t=>`<div class="row"><div class="row-l" style="font-size:11px">${t.date.split('-').reverse().join('/')} \u00b7 <b>${t.nom.slice(0,36)}</b></div><div class="row-v rd" style="font-size:11px">\u2212${fm(Math.abs(t.amt))}</div></div>`).join('');
+return h}
 let acc=selA;
-if(acc==='auto'){acc=null;for(const[k,c]of Object.entries(COMPTES))if(f.name.includes(c.num))acc=k;
-if(!acc){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Compte non reconnu — choisis-le manuellement</div></div>`);continue}}
+if(acc==='auto'){acc=null;for(const[k,c]of Object.entries(COMPTES))if(fname.includes(c.num))acc=k;
+if(!acc)return`<div class="row"><div class="row-l">${fname}</div><div class="row-v rd">Compte non reconnu \u2014 choisis-le manuellement</div></div>`}
 const tx=parseCSV(new TextDecoder('iso-8859-1').decode(new Uint8Array(buf)));
-if(!tx.length){report.push(`<div class="row"><div class="row-l">${f.name}</div><div class="row-v rd">Aucune transaction lisible</div></div>`);continue}
-const existing=D.tx[acc]||{};const batch={};let nb=0;
-for(const t of tx){if(!existing[t.k]){batch[t.k]=t;nb++}}
-if(nb)writeBatch('tx/'+acc,batch);
+if(!tx.length)return`<div class="row"><div class="row-l">${fname}</div><div class="row-v rd">Aucune transaction lisible</div></div>`;
+const existing=D.tx[acc]||{};const batch={};const nouv=[];
+for(const t of tx){if(!existing[t.k]){batch[t.k]=t;nouv.push(t)}}
+if(nouv.length)writeBatch('tx/'+acc,batch);
 write('meta/lastImp/'+acc,new Date().toISOString());
+const dts=tx.map(t=>t.date).sort();
+write('importLog/i'+Date.now()+Math.random().toString(36).slice(2,5),{acc,nb:nouv.length,lues:tx.length,min:dts[0],max:dts[dts.length-1],par:userEmail(),ts:Date.now()});
 matchEngagements(tx);
-report.push(`<div class="row"><div class="row-l">${COMPTES[acc].lbl}</div><div class="row-v g">${nb} nouvelle(s) / ${tx.length} lues</div></div>`)}
+let h=`<div style="font-size:12px;font-weight:800;margin:8px 0 2px">${COMPTES[acc].lbl} \u2014 ${nouv.length} nouvelle(s) / ${tx.length} lues</div>`;
+if(nouv.length){
+const gr={};nouv.forEach(t=>{const g=FAMN[t.amt>0?'rev':t.c]||'Autres';gr[g]=(gr[g]||0)+1});
+h+=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">${Object.entries(gr).map(([g,n])=>g+' +'+n).join(' \u00b7 ')}</div>`;
+h+=nouv.sort((a,b2)=>b2.date.localeCompare(a.date)).map(ligneTx).join('')}
+return h}
+async function importerFichiers(items){
+let report='';
+for(const it of items){report+=await traiterFichier(it.name,it.buf)}
 document.getElementById('impRes').style.display='block';
-document.getElementById('impSum').innerHTML=report.join('');
-e.target.value='';if(!FB_ON)refresh()});
+document.getElementById('impSum').innerHTML=report;
+if(!FB_ON)refresh()}
+document.getElementById('csvInput').addEventListener('change',async e=>{
+const files=[...e.target.files];if(!files.length)return;
+const items=[];for(const f of files)items.push({name:f.name,buf:await f.arrayBuffer()});
+e.target.value='';
+importerFichiers(items)});
+/* Consommation des fichiers re\u00e7us par partage Android */
+let sharedConsumed=false;
+async function consommerPartage(){
+if(sharedConsumed||!location.search.includes('shared=1'))return;
+if(!CFG||(FB_ON&&!firebase.auth().currentUser))return; /* retent\u00e9 au prochain refresh */
+sharedConsumed=true;
+try{
+const cache=await caches.open('shared-files');
+const keys=await cache.keys();
+if(!keys.length)return;
+const items=[];
+for(const k of keys){const r=await cache.match(k);
+items.push({name:decodeURIComponent(r.headers.get('X-Filename')||'partage.csv'),buf:await r.arrayBuffer()});
+await cache.delete(k)}
+allerImporter();
+await importerFichiers(items);
+history.replaceState(null,'',location.pathname)}catch(e){alert('Import partag\u00e9 : '+e.message)}}
 
-/* ================= ENGAGEMENTS ================= */
+/* ================= ENGAGEMENTS =================/* ================= ENGAGEMENTS ================= */
 function matchEngagements(newTx){
 for(const[id,eng]of Object.entries(D.engagements||{})){
 if(eng.status!=='pending')continue;
@@ -1060,6 +1107,72 @@ st.textContent=actif?'Activ\u00e9es sur cet appareil \u2713':'Pas encore activ\u
 document.getElementById('btnNotif').style.display=actif?'none':'block';
 dv.innerHTML=toks.map(([id,t])=>`<div class="row"><div class="row-l">${t.email===userEmail()?'Toi':t.email}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${/Android/i.test(t.ua)?'Android':/iPhone|iPad/i.test(t.ua)?'iPhone':'PC'} \u00b7 ${new Date(t.ts).toLocaleDateString('fr-FR')}</span></div><div class="row-v" style="cursor:pointer;color:var(--red)" onclick="if(confirm('Retirer cet appareil ?'))write('fcmTokens/${id}',null)">\u2715</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun appareil enregistr\u00e9.</div>'}
 
+/* ================= CHÈQUES / FIABILITÉ / HISTORIQUES ================= */
+function updateCheques(){
+const el=document.getElementById('chqList');if(!el)return;
+const chqs=ALL.filter(t=>t.chq&&t.amt<0).sort((a,b)=>b.date.localeCompare(a.date));
+if(!chqs.length){el.innerHTML='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun ch\u00e8que d\u00e9tect\u00e9 dans les imports.</div>';return}
+const nonNommes=chqs.filter(t=>!((D.cheques||{})[t._acc+'_'+t.chq]||{}).benef);
+const nommes=chqs.filter(t=>((D.cheques||{})[t._acc+'_'+t.chq]||{}).benef);
+let h='';
+if(nonNommes.length)h+=`<div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px">${nonNommes.length} ch\u00e8que(s) \u00e0 nommer :</div>`;
+h+=nonNommes.slice(0,10).map(t=>{
+const cle=t._acc+'_'+t.chq;const lbl=(COMPTES[t._acc]||{}).lbl||t._acc;
+return`<div style="background:var(--orange-bg);border:1px solid #fcd34d;border-radius:10px;padding:10px;margin-bottom:6px">
+<div style="font-size:12px;font-weight:700;margin-bottom:6px">n\u00b0${t.chq} \u00b7 ch\u00e9quier ${lbl} \u00b7 ${t.dd} \u00b7 ${fm(Math.abs(t.amt))}</div>
+<div style="display:flex;gap:5px">
+<input type="text" id="chb_${cle}" placeholder="B\u00e9n\u00e9ficiaire / objet" style="flex:2;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600">
+<select id="chc_${cle}" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600"><option value="sante">Sant\u00e9</option><option value="ext">Extras</option><option value="trav">Travaux</option><option value="courses">Courses</option><option value="fix">Fixe</option></select>
+<button onclick="nommerCheque('${cle}')" style="padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer">\u2713</button>
+</div></div>`}).join('');
+if(nommes.length)h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:8px 0 4px">Talon num\u00e9rique :</div>'+nommes.slice(0,20).map(t=>{
+const c=(D.cheques||{})[t._acc+'_'+t.chq];const lbl=(COMPTES[t._acc]||{}).lbl||t._acc;
+return`<div class="row"><div class="row-l">n\u00b0${t.chq} \u00b7 ${c.benef}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${lbl} \u00b7 ${t.dd}</span></div><div class="row-v n">${fm(Math.abs(t.amt))}</div></div>`}).join('');
+el.innerHTML=h}
+function nommerCheque(cle){
+const b=document.getElementById('chb_'+cle).value.trim();
+const cat=document.getElementById('chc_'+cle).value;
+if(!b){alert('Indique le b\u00e9n\u00e9ficiaire ou l\u2019objet.');return}
+write('cheques/'+cle,{benef:b,cat,par:userEmail(),ts:Date.now()})}
+function verifierSolde(acc){
+const reel=parseFloat(prompt('Solde r\u00e9el du compte '+((COMPTES[acc]||{}).lbl||acc)+' (espace bancaire, maintenant) :'));
+if(isNaN(reel))return;
+const calc=soldeCompte(acc);
+write('controles/'+acc,{reel,calc:Math.round(calc*100)/100,ecart:Math.round((reel-calc)*100)/100,ts:Date.now()})}
+function updateFiab(){
+const el=document.getElementById('fiabBody');if(!el)return;
+let h='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px">Contr\u00f4le des soldes (banque vs appli) :</div>';
+h+=comptesTries().map(([id,c])=>{
+const ct=(D.controles||{})[id];
+let v='<span style="color:var(--text-muted)">jamais contr\u00f4l\u00e9</span>';
+if(ct){const col=Math.abs(ct.ecart)<1?'g':Math.abs(ct.ecart)<50?'o':'rd';
+v=`<span class="${col}">\u00e9cart ${fm(ct.ecart)}</span> <span style="font-weight:500;color:var(--text-muted)">(${new Date(ct.ts).toLocaleDateString('fr-FR')})</span>`}
+return`<div class="row"><div class="row-l">${c.lbl}</div><div class="row-v" style="font-size:11px">${v} <span style="cursor:pointer;color:var(--accent);font-weight:800" onclick="verifierSolde('${id}')">V\u00e9rifier</span></div></div>`}).join('');
+/* zones grises : trous > 10 j sur comptes courants, 12 derniers mois */
+const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+let gaps=[];
+for(const[id,c]of comptesTries()){
+if(c.type!=='courant')continue;
+const dts=[...new Set(ALL.filter(t=>t._acc===id&&t.date>=cutoff).map(t=>t.date))].sort();
+for(let i=1;i<dts.length;i++){const g=(new Date(dts[i])-new Date(dts[i-1]))/864e5;
+if(g>10)gaps.push(c.lbl+' : '+dts[i-1]+' \u2192 '+dts[i]+' ('+Math.round(g)+' j)')}}
+h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 4px">Zones grises (p\u00e9riodes sans aucune op\u00e9ration \u2014 imports \u00e0 v\u00e9rifier) :</div>';
+h+=gaps.length?gaps.slice(0,6).map(g=>`<div style="font-size:11px;font-weight:600;color:#92400e">\u26a0 ${g}</div>`).join(''):'<div style="font-size:11px;font-weight:600;color:var(--green)">Aucune : couverture continue.</div>';
+/* d\u00e9bits obscurs : top Non class\u00e9 6 mois */
+const c6=new Date(Date.now()-183*864e5).toISOString().slice(0,10);
+const nc={};ALL.filter(t=>!t._int&&t.amt<0&&t.l==='Non class\u00e9'&&t.date>=c6).forEach(t=>{const k=t.lib.slice(0,32);if(!nc[k])nc[k]={n:0,s:0};nc[k].n++;nc[k].s+=Math.abs(t.amt)});
+const top=Object.entries(nc).sort((a,b)=>b[1].s-a[1].s).slice(0,8);
+h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 4px">D\u00e9bits d\u2019origine obscure (non class\u00e9s, 6 mois) \u2014 \u00e0 envoyer \u00e0 Claude pour cr\u00e9er les r\u00e8gles :</div>';
+h+=top.length?top.map(([k,v])=>`<div class="row"><div class="row-l" style="font-size:11px">${k}<span style="font-weight:500;color:var(--text-muted)"> \u00d7${v.n}</span></div><div class="row-v o" style="font-size:11px">${fs(v.s)}</div></div>`).join(''):'<div style="font-size:11px;font-weight:600;color:var(--green)">Rien : tout est class\u00e9.</div>';
+el.innerHTML=h}
+function updateHistos(){
+const ih=document.getElementById('impHisto');
+if(ih){const logs=Object.values(D.importLog||{}).sort((a,b)=>b.ts-a.ts).slice(0,10);
+ih.innerHTML=logs.length?logs.map(l=>`<div class="row"><div class="row-l">${(COMPTES[l.acc]||{}).lbl||l.acc}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${new Date(l.ts).toLocaleDateString('fr-FR')} \u00b7 ${l.par===userEmail()?'toi':(l.par||'').split('@')[0]}</span></div><div class="row-v ${l.nb?'g':'n'}" style="font-size:11px">+${l.nb} / ${l.lues}</div></div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun import journalis\u00e9 (les imports ant\u00e9rieurs \u00e0 la v6 n\u2019y figurent pas).</div>'}
+const nh=document.getElementById('notifHisto');
+if(nh){const ns=Object.values(D.notifLog||{}).sort((a,b)=>b.ts-a.ts).slice(0,15);
+nh.innerHTML=ns.length?ns.map(n=>`<div class="row"><div class="row-l" style="font-size:11px">${n.t}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${new Date(n.ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><br><span style="font-weight:500;color:var(--text-dim);font-size:11px">${n.b}</span></div></div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune notification serveur envoy\u00e9e pour l\u2019instant.</div>'}}
+
 /* ================= EXPORT JSON ================= */
 function exportJson(){
 const dump={exportDate:new Date().toISOString(),app:'budget-meney',user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,tx:D.tx};
@@ -1251,10 +1364,14 @@ rev:"<b>Revenus du mois.</b> Tout l'argent qui entre ce mois-ci, ligne par ligne
 dep:"<b>Dépenses du mois.</b> Tout l'argent qui sort ce mois-ci, par famille. Le total passe en rouge s'il dépasse la cible.",
 cpt:"<b>Comptes.</b> Solde affiché = solde saisi au départ + toutes les opérations importées depuis. Si un solde est faux, il manque des opérations : réimporte un CSV qui couvre la période manquante.",
 lastimp:"<b>Dernier import.</b> Le délai de chaque compte, un par un. L'appli ne voit que ce qu'on lui donne : un import par semaine et par personne. Au-delà de 7 jours sur un compte courant, l'appli SE VERROUILLE : plus de consultation tant que les relevés ne sont pas à jour — des chiffres faux valent pire que rien. L'épargne, peu active, a 35 jours.",
-impzone:"<b>Import CSV.</b> Deux types de fichiers. 1. Les CSV Caisse d'Épargne (Opérations, puis Télécharger) : l'appli reconnaît chaque compte par le numéro dans le nom du fichier. 2. Le CSV PayPal (paypal.com : Activité, puis Télécharger) : il sert à voir À TRAVERS les lignes 'PayPal' de la banque — abonnements cachés, doublons. Il ne compte pas deux fois : c'est de l'analyse, pas des dépenses en plus. Tu peux tout donner d'un coup. Ce qui est déjà connu est ignoré.",
+impzone:"<b>Import CSV.</b> Trois chemins. 1 — Le plus simple : depuis l'appli bancaire, exporte le CSV (elle propose d'office « depuis le dernier export ») puis Partager → Budget : l'import se fait tout seul, ici. 2 — Cette zone : choisis les fichiers téléchargés, plusieurs à la fois. 3 — Le CSV PayPal, par l'un ou l'autre chemin : il sert à voir à travers les lignes PayPal, sans compter double. Après chaque import, le détail complet s'affiche : chaque opération qui entre, sa raison, son montant. Ce qui est déjà connu est ignoré.",
 impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte toute seule. Choisis un compte à la main seulement si le fichier a été renommé.",
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
 notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
+cheques:"<b>Chèques — talon numérique.</b> Chaque chèque débité est repéré par son numéro et son chéquier (le compte d'où il part : Paul, Claire, Commun). Un chèque non nommé apparaît en orange : indique le bénéficiaire ou l'objet, choisis la bonne catégorie, valide. Dès qu'il est nommé, il prend ce nom partout dans l'appli et rejoint la bonne enveloppe. C'est le talon de chéquier, en mieux : il ne se perd pas, et vous le voyez tous les deux.",
+fiab:"<b>Fiabilité des données.</b> Trois contrôles. 1 — Les soldes : touche Vérifier, saisis le solde exact de l'espace bancaire, l'appli affiche l'écart avec son propre calcul. Écart proche de zéro = imports complets. Gros écart = il manque des opérations quelque part. 2 — Les zones grises : des périodes sans aucune opération sur un compte courant, signe probable d'un trou dans les imports. 3 — Les débits obscurs : ce que l'appli ne sait pas classer. Envoie cette liste à Claude, il crée les règles, et l'obscur disparaît.",
+imphisto:"<b>Historique des imports.</b> Qui a importé quoi, quand, et combien d'opérations nouvelles. La mémoire du rituel du samedi.",
+notifhisto:"<b>Historique des notifications.</b> Tout ce que le serveur a envoyé, avec le texte exact. Une notification ratée sur le téléphone se retrouve ici.",
 export:"<b>Export de contrôle.</b> Télécharge TOUT le contenu de l'appli en un fichier JSON : config, soldes, opérations, engagements, journal. À envoyer à Claude pour vérifier que les données sont justes et cohérentes. Aucune donnée ne part nulle part : le fichier reste sur ton appareil.",
 envies:"<b>Récompenses.</b> Coche une envie : le budget extras restant se recalcule. Valide : ça devient un engagement. Au prochain import, l'appli cherche la dépense et dit si tu as tenu le montant prévu (marge de 15 %). Le plaisir prévu et chiffré, pas le plaisir subi.",
 chtot:"<b>Dépenses par mois.</b> Une barre par mois. Vert : sous la cible. Rouge : au-dessus. La ligne pointillée, c'est la cible.",
@@ -1271,7 +1388,7 @@ simponct:"<b>Événement ponctuel.</b> Un achat (montant négatif) ou une rentr�
 simres:"<b>Résultat.</b> Deux courbes : sans l'effort, avec l'effort — sur la même base (celle que tu as choisie au-dessus). Le texte donne le gain de l'effort ET l'épargne au bout : les deux, toujours, pour que le texte et la courbe racontent la même histoire. Les paliers montrent leur date avant/après. Sauvegarde le scénario pour en parler avec Claire, ou engage-toi dessus.",
 simobj:"<b>Objectif inversé.</b> Tu dis combien tu veux dégager EN PLUS, et en combien de mois. L'appli répond : l'épargne mensuelle qu'il faut, le plafond de dépenses que ça impose, et surtout la comparaison qui compte : est-ce que tenir la cible normale suffit, ou faut-il faire plus ? Ton rythme réel est rappelé en dessous, pour information.",
 simscen:"<b>Scénarios sauvegardés.</b> Nomme un scénario et garde-le : il est partagé, Claire le voit sur son téléphone. C'est fait pour décider ensemble AVANT de dépenser. ▶ recharge le scénario, ✕ le supprime.",
-version:"<b>Version de l'app.</b> Le point compare la version qui tourne sur cet appareil avec la dernière poussée sur GitHub. Vert : à jour. Orange : 1 push de retard. Rouge : plusieurs. Toucher la ligne force la mise à jour (vide le cache et recharge). Si le point reste rouge après ça, ferme complètement l'app et rouvre-la — un onglet resté ouvert bloque la mise à jour.",
+version:"<b>Version de l'app.</b> Le point compare la version de cet appareil avec la dernière poussée sur GitHub. Vert : à jour. Sinon, un bandeau apparaît en haut de l'écran avec le bouton Mettre à jour — impossible à rater. Si le bandeau revient sans cesse après mise à jour, ferme complètement l'app et rouvre-la : un onglet resté ouvert bloque le remplacement.",
 setup:"<b>Soldes de départ.</b> Le point zéro de tout. Prends les soldes exacts dans l'espace bancaire LE JOUR MÊME. Un solde faux = toutes les projections fausses d'autant.",
 login:"<b>Connexion.</b> Seuls vos deux emails ont accès. Les comptes sont créés dans la console Firebase. C'est aussi cette identité qui sert au verrou : l'appli sait qui demande et qui approuve."
 };
@@ -1311,9 +1428,9 @@ computeAll();
 if(!D.etat&&(FB_ON?firebase.auth().currentUser:true)){buildSetup();document.getElementById('ovlSetup').classList.add('show')}
 else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-updateBlocage();
+updateBlocage();consommerPartage();
 const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
-buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();
+buildAccSel();updateProjection();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
 const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
@@ -1322,9 +1439,13 @@ const r=await fetch('index.html',{cache:'no-store'});
 const m=(await r.text()).match(/APP_VERSION=(\d+)/);
 if(!m){dot.style.color='var(--text-muted)';txt.textContent='Version en ligne inconnue';return}
 const remote=+m[1],diff=remote-APP_VERSION;
-if(diff<=0){dot.style.color='var(--green)';txt.textContent='App \u00e0 jour (v'+APP_VERSION+')'}
-else if(diff===1){dot.style.color='var(--orange)';txt.textContent='1 push de retard \u2014 touche ici pour mettre \u00e0 jour'}
-else{dot.style.color='var(--red)';txt.textContent='En retard de '+diff+' push \u2014 touche ici pour mettre \u00e0 jour'}}
+const ban=document.getElementById('majBanner');
+if(diff<=0){dot.style.color='var(--green)';txt.textContent='App \u00e0 jour (v'+APP_VERSION+')';ban.style.display='none'}
+else{ban.style.display='block';
+document.getElementById('majTxt').textContent=diff===1?'Nouvelle version disponible (v'+remote+')':'App en retard de '+diff+' versions';
+ban.style.background=diff===1?'var(--accent)':'var(--red)';
+if(diff===1){dot.style.color='var(--orange)';txt.textContent='1 push de retard'}
+else{dot.style.color='var(--red)';txt.textContent='En retard de '+diff+' push'}}}
 catch(e){dot.style.color='var(--text-muted)';txt.textContent='Version non v\u00e9rifi\u00e9e (hors ligne ?)'}}
 async function majVersion(){
 try{const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)await r.update();
