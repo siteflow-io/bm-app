@@ -210,6 +210,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 .notif-when{font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .notif-t{font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px;line-height:1.3}
 .notif-b{font-size:12px;font-weight:600;color:var(--text-dim);line-height:1.45}
+.env-note{font-size:10px;font-weight:700;line-height:1.4;padding:0 0 6px 12px;margin-top:-4px;border-bottom:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -454,7 +455,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=19; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=20; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -469,6 +470,9 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:20,date:'2026-07-18',origine:"Captures de Paul : Cantine et Chauffage absents des enveloppes, lignes illisibles, zones grises toujours l\u00e0",
+ch:["BUG DE FOND corrig\u00e9 : les nouveaux r\u00e9glages livr\u00e9s avec une version n'atteignaient jamais l'app, car la configuration d\u00e9j\u00e0 enregistr\u00e9e les \u00e9crasait. Cantine et Chauffage apparaissent enfin","Lignes d'enveloppe lisibles : le nom reste seul sur sa ligne, les mentions (sous-\u00e9valu\u00e9e, report) passent en dessous en petit","Zones grises d\u00e9finitivement supprim\u00e9es : une p\u00e9riode sans achat n'est pas une anomalie"],
+cons:["V\u00e9rifie que Cantine et Chauffage sont bien l\u00e0 dans Mois","Il reste le second fichier de r\u00e8gles \u00e0 importer (34 r\u00e8gles : Total, Conforama, PPG, tabac\u2026)"]},
 {v:19,date:'2026-07-18',origine:"Session de cadrage avec Paul : chauffage oubli\u00e9, enveloppes irrationnelles, compte joint \u00e0 sec",
 ch:["Nouvelle enveloppe CHAUFFAGE (300 \u20ac/mois) : les granul\u00e9s ne se paieront plus en piochant dans le Livret A","R\u00e8gle Anjou Bois \u00c9nergie \u2192 Chauffage (4 paiements retrouv\u00e9s, 2 507 \u20ac en 2025, noy\u00e9s dans Travaux)","REPORT D'ENVELOPPE : ce qui n'a pas \u00e9t\u00e9 d\u00e9pens\u00e9 le mois dernier peut \u00eatre report\u00e9 sur ce mois \u2014 un clic, assum\u00e9, annulable","Fini le \u00ab r\u00e9serve \u00e9puis\u00e9e \u00bb incompr\u00e9hensible : l'appli dit d\u00e9sormais quand une enveloppe est SOUS-\u00c9VALU\u00c9E, avec la moyenne r\u00e9elle","L'appli surveille son propre calibrage : si enveloppes + fixes \u2260 cible, elle le signale","Elle signale aussi les cat\u00e9gories sans enveloppe (d\u00e9penses invisibles)","Ajouter un compte depuis l'appli (pour les nouveaux livrets)"],
 cons:["Enveloppes \u00e0 recalibrer ensemble : l'\u00e9cart actuel est signal\u00e9 dans Comptes \u2192 Fiabilit\u00e9","Compte joint \u00e0 alimenter : il n'a plus re\u00e7u de virement depuis octobre 2025"]},
@@ -523,6 +527,16 @@ env:{courses:1000,carburant:220,sante:150,trav:200,abo:80,cantine:170,chauffage:
 comptes:{paul:{lbl:"Paul",num:"04119545035",type:"courant",ordre:1},claire:{lbl:"Claire",num:"04119543318",type:"courant",ordre:2},commun:{lbl:"Commun",num:"04119047810",type:"courant",ordre:3},epargne:{lbl:"Épargne Madeleine",num:"00135834655",type:"epargne",ordre:4}},
 reglesPerso:{}
 };
+/* Les nouvelles enveloppes/reglages livres avec une version doivent atteindre l'app
+   meme quand une config existe deja en base : on complete les manques, sans rien ecraser. */
+function fusionnerDefauts(cfg){
+if(!cfg)return JSON.parse(JSON.stringify(CFG_DEFAULTS));
+const d=CFG_DEFAULTS;
+for(const k of Object.keys(d)){
+if(cfg[k]===undefined){cfg[k]=JSON.parse(JSON.stringify(d[k]));continue}
+if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])){
+for(const k2 of Object.keys(d[k]))if(cfg[k][k2]===undefined)cfg[k][k2]=JSON.parse(JSON.stringify(d[k][k2]));}}
+return cfg}
 let CFG=null,CIBLE=0,EPARGNE_CIBLE=0,REVENUS_REF=0,FIXES_REF=0,ENV={},COMPTES={};
 let SEUIL_EXCEP=250;
 function applyCfg(){CIBLE=CFG.cible;EPARGNE_CIBLE=CFG.epargneCible;REVENUS_REF=CFG.revenusRef;FIXES_REF=CFG.fixesRef;ENV=CFG.env;COMPTES=CFG.comptes;SEUIL_EXCEP=CFG.seuilExcep||250}
@@ -691,8 +705,8 @@ document.getElementById('ovlLogin').classList.remove('show');
 fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{},tutoVus:v.tutoVus||{},az:v.az||{},snapshots:v.snapshots||{},reports:v.reports||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
-CFG=D.config;applyCfg();refresh()})})}
-else{document.getElementById('modeBadge').classList.add('show');localLoad();if(!D.config){D.config=JSON.parse(JSON.stringify(CFG_DEFAULTS));localSave()}CFG=D.config;applyCfg();refresh()}}
+CFG=fusionnerDefauts(D.config);applyCfg();refresh()})})}
+else{document.getElementById('modeBadge').classList.add('show');localLoad();if(!D.config){D.config=JSON.parse(JSON.stringify(CFG_DEFAULTS));localSave()}CFG=fusionnerDefauts(D.config);applyCfg();refresh()}}
 function doLogin(){const e=document.getElementById('lgEmail').value.trim(),p=document.getElementById('lgPass').value;
 firebase.auth().signInWithEmailAndPassword(e,p).catch(err=>{const b=document.getElementById('loginErr');b.style.display='block';b.textContent='Connexion refusée : '+(err.code==='auth/invalid-credential'?'email ou mot de passe incorrect.':err.message)})}
 function buildSetup(){
@@ -1115,13 +1129,14 @@ const sp=depOf(txs);const r=sp/bud;
 const col=r<=0.8?'#16a34a':r<=1?'#d97706':'#dc2626';
 const res=reserveCumul(c);
 const moy=moyenneCat(c);
-const resTxt=res===null?'':(res>=0?` <span style="font-size:10px;color:#16a34a;font-weight:700">+${fs(res)} de r\u00e9serve</span>`:` <span style="font-size:10px;color:#dc2626;font-weight:700" title="L'enveloppe est plus basse que la d\u00e9pense habituelle">enveloppe sous-\u00e9valu\u00e9e (${fs(moy)}/mois en moyenne)</span>`);
+const resTxt=res===null?'':(res>=0?`<span style="color:#16a34a">+${fs(res)} de r\u00e9serve</span>`:`<span style="color:#dc2626">sous-\u00e9valu\u00e9e \u2014 ${fs(moy)}/mois r\u00e9els</span>`);
 const rep=reportDe(c,mk);
 const reliq=reliquatPrec(c,mk);
 const repTxt=rep>0
-?` <span onclick="annulerReport('${c}',event)" style="font-size:10px;color:var(--accent);font-weight:800;cursor:pointer">+${fs(rep)} report\u00e9 \u2715</span>`
-:(reliq>0?` <span onclick="reporterEnv('${c}',event)" style="font-size:10px;color:var(--accent);font-weight:800;cursor:pointer;text-decoration:underline">reporter ${fs(reliq)} ?</span>`:'');
-return`<div class="env" style="cursor:pointer" onclick="togEnv('${c}')"><div class="env-n">${envOuverte===c?'\u25be':'\u25b8'} ${lbl}${resTxt}${repTxt}</div><div class="env-track"><div class="env-fill" style="width:${Math.min(100,r*100)}%;background:${col}"></div></div><div class="env-v">${fs(sp)} / ${fs(bud)}</div></div>`
+?`<span onclick="annulerReport('${c}',event)" style="color:var(--accent);cursor:pointer">+${fs(rep)} report\u00e9 \u2715</span>`
+:(reliq>0?`<span onclick="reporterEnv('${c}',event)" style="color:var(--accent);cursor:pointer;text-decoration:underline">reporter ${fs(reliq)} ?</span>`:'');
+return`<div class="env" style="cursor:pointer" onclick="togEnv('${c}')"><div class="env-n">${envOuverte===c?'\u25be':'\u25b8'} ${lbl}</div><div class="env-track"><div class="env-fill" style="width:${Math.min(100,r*100)}%;background:${col}"></div></div><div class="env-v">${fs(sp)} / ${fs(bud)}</div></div>`
++((resTxt||repTxt)?`<div class="env-note">${resTxt}${resTxt&&repTxt?' \u00b7 ':''}${repTxt}</div>`:'')
 +(envOuverte===c?'<div style="padding:4px 0 8px 10px;border-left:2px solid var(--border)">'+(txs.length?txs.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>ligneOp(t,{small:true,cpt:true})).join(''):'<div style="font-size:11px;color:var(--text-muted);font-weight:600">Aucune d\u00e9pense ce mois-ci.</div>')+'</div>':'')}).join('')}
 let famOuverte=null,revOuvert=false;
 function togFam(g){famOuverte=famOuverte===g?null:g;updateListes()}
@@ -1444,7 +1459,7 @@ if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom
 /* 2. \u00c9carts de solde contr\u00f4l\u00e9s */
 for(const[id,c]of comptesTries()){const ev=ecartVivant(id);
 if(ev&&Math.abs(ev.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ev.ecart)+' sur '+c.lbl+' (contr\u00f4le du '+ev.dateIso.split('-').reverse().join('/')+') \u2014 des op\u00e9rations manquent sur cette p\u00e9riode'})}
-/* 3. Zones grises */
+/* 3. (ancien bloc zones grises — supprimé en v20) */
 /* Coh\u00e9rence du calibrage : la somme des enveloppes + les fixes de r\u00e9f\u00e9rence
    doit \u00e9galer la cible, sinon on peut tenir chaque enveloppe et rater la cible. */
 {const somme=Object.values(ENV||{}).reduce((s,v)=>s+(+v||0),0);
@@ -1483,16 +1498,8 @@ if(ev){const col=Math.abs(ev.ecart)<1?'g':Math.abs(ev.ecart)<50?'o':'rd';
 const plusRecent=(D.tx[id]&&Object.values(D.tx[id]).some(t=>t.date>ev.dateIso));
 v=`<span class="${col}">\u00e9cart ${fm(ev.ecart)}</span> <span style="font-weight:500;color:var(--text-muted)">(au ${ev.dateIso.split('-').reverse().join('/')})${plusRecent?' \u00b7 revérifiable':''}</span>`}
 return`<div class="row"><div class="row-l">${c.lbl}</div><div class="row-v" style="font-size:11px">${v} <span style="cursor:pointer;color:var(--accent);font-weight:800" onclick="verifierSolde('${id}')">V\u00e9rifier</span></div></div>`}).join('');
-/* zones grises : trous > 10 j sur comptes courants, 12 derniers mois */
-const cutoff=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
-let gaps=[];
-for(const[id,c]of comptesTries()){
-if(c.type!=='courant')continue;
-const dts=[...new Set(ALL.filter(t=>t._acc===id&&t.date>=cutoff).map(t=>t.date))].sort();
-for(let i=1;i<dts.length;i++){const g=(new Date(dts[i])-new Date(dts[i-1]))/864e5;
-if(g>10)gaps.push(c.lbl+' : '+dts[i-1]+' \u2192 '+dts[i]+' ('+Math.round(g)+' j)')}}
-h+='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 4px">Zones grises (p\u00e9riodes sans aucune op\u00e9ration \u2014 imports \u00e0 v\u00e9rifier) :</div>';
-h+=gaps.length?gaps.slice(0,6).map(g=>`<div style="font-size:11px;font-weight:600;color:#92400e">\u26a0 ${g}</div>`).join(''):'<div style="font-size:11px;font-weight:600;color:var(--green)">Aucune : couverture continue.</div>';
+/* Plus de \u00ab zones grises \u00bb : une p\u00e9riode sans achat n'est pas une anomalie.
+   La couverture se juge \u00e0 la date du dernier CSV import\u00e9 (voir Historique des imports). */
 /* d\u00e9bits obscurs : top Non class\u00e9 6 mois */
 const c6=new Date(Date.now()-183*864e5).toISOString().slice(0,10);
 const nc={};ALL.filter(t=>!t._int&&t.amt<0&&t.l==='Non class\u00e9'&&t.date>=c6).forEach(t=>{const k=t.lib.slice(0,32);if(!nc[k])nc[k]={n:0,s:0};nc[k].n++;nc[k].s+=Math.abs(t.amt)});
@@ -1992,7 +1999,7 @@ impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte t
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
 notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
 cheques:"<b>Chèques — talon numérique.</b> Chaque chèque débité est repéré par son numéro et son chéquier (le compte d'où il part : Paul, Claire, Commun). Un chèque non nommé apparaît en orange : indique le bénéficiaire ou l'objet, choisis la bonne catégorie, valide. Dès qu'il est nommé, il prend ce nom partout dans l'appli et rejoint la bonne enveloppe. C'est le talon de chéquier, en mieux : il ne se perd pas, et vous le voyez tous les deux.",
-fiab:"<b>Fiabilité des données.</b> L'appli se surveille elle-même. En tête : les anomalies qu'elle détecte toute seule (mouvement familial pris pour une dépense, écart de solde, trou dans les imports, chèques anonymes, débits inconnus). Quand il y en a, un bouton exporte tout en JSON : envoie ce fichier à Claude, il trouve la cause et corrige. En dessous, les trois contrôles permanents : les soldes (touche Vérifier, saisis le solde exact de la banque, l'écart s'affiche), les zones grises, et les débits non classés.",
+fiab:"<b>Fiabilité des données.</b> L'appli se surveille elle-même. En tête : les anomalies qu'elle détecte toute seule (mouvement familial pris pour une dépense, écart de solde, trou dans les imports, chèques anonymes, débits inconnus). Quand il y en a, un bouton exporte tout en JSON : envoie ce fichier à Claude, il trouve la cause et corrige. En dessous, les trois contrôles permanents : les soldes (touche Vérifier, saisis le solde exact de la banque, l'écart s'affiche) et les débits non classés.",
 imphisto:"<b>Historique des imports.</b> Qui a importé quoi, quand, et combien d'opérations nouvelles. La mémoire du rituel du samedi.",
 notifhisto:"<b>Historique des notifications.</b> Tout ce que le serveur a envoyé, avec le texte exact. Une notification ratée sur le téléphone se retrouve ici.",
 export:"<b>Échange avec Claude.</b> Le circuit d'analyse : 1 — Copie le prompt (bouton). 2 — Exporte le JSON (bouton du dessous ou celui des anomalies). 3 — Colle les deux dans une conversation avec Claude : il analyse, nomme l'obscur, signale les incohérences, et rend un petit fichier JSON. 4 — Importe ce fichier ici comme un relevé (ou partage-le à l'app) : après confirmation, il ne peut toucher QUE les nommages, les chèques et les notes — jamais les transactions ni les cibles.",
