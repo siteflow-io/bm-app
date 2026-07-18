@@ -206,6 +206,10 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 .nav-tab[data-p="pSimu"].active{color:#7c3aed}
 .nav-tab[data-p="pComptes"].active{color:#16a34a}
 .nav-tab[data-p="pRegles"].active{color:#475569}
+.notif-card{background:var(--bg);border-radius:12px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.notif-when{font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.notif-t{font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px;line-height:1.3}
+.notif-b{font-size:12px;font-weight:600;color:var(--text-dim);line-height:1.45}
 </style>
 </head>
 <body>
@@ -1419,7 +1423,8 @@ if(ih){const logs=Object.values(D.importLog||{}).sort((a,b)=>b.ts-a.ts).slice(0,
 ih.innerHTML=logs.length?logs.map(l=>`<div class="row"><div class="row-l">${(COMPTES[l.acc]||{}).lbl||l.acc}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${new Date(l.ts).toLocaleDateString('fr-FR')} \u00b7 ${l.par===userEmail()?'toi':(l.par||'').split('@')[0]}</span></div><div class="row-v ${l.nb?'g':'n'}" style="font-size:11px">+${l.nb} / ${l.lues}</div></div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun import journalis\u00e9 (les imports ant\u00e9rieurs \u00e0 la v6 n\u2019y figurent pas).</div>'}
 const nh=document.getElementById('notifHisto');
 if(nh){const ns=Object.values(D.notifLog||{}).sort((a,b)=>b.ts-a.ts).slice(0,15);
-nh.innerHTML=ns.length?ns.map(n=>`<div class="row"><div class="row-l" style="font-size:11px">${n.t}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${new Date(n.ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><br><span style="font-weight:500;color:var(--text-dim);font-size:11px">${n.b}</span></div></div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune notification serveur envoy\u00e9e pour l\u2019instant.</div>'}}
+nh.innerHTML=ns.length?ns.map(n=>{const d=new Date(n.ts);const j=Math.floor((Date.now()-n.ts)/864e5);const quand=j<=0?'aujourd\u2019hui '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):j<=1?'hier '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+return `<div class="notif-card"><div class="notif-when">${quand}</div><div class="notif-t">${n.t}</div><div class="notif-b">${n.b}</div></div>`}).join(''):'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucune notification serveur envoy\u00e9e pour l\u2019instant.</div>'}}
 
 /* ================= PARSEUR AMAZON ================= */
 function isAmazonCsv(raw){return raw.slice(0,200).includes('Num\u00e9ro de commande')&&raw.slice(0,300).includes('ASIN')}
