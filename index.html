@@ -370,7 +370,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="imp-zone" id="impZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><h3>Importer un ou plusieurs CSV</h3><p>Les opérations déjà connues sont ignorées</p></div><div style="text-align:center;margin:-8px 0 12px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Comment ça marche</span><span class="tip-i" data-i="impzone">i</span></div>
 <div class="card" id="impRes" style="display:none"><div class="card-t">Rapport d'import</div><div id="impSum"></div></div>
 <div class="card"><div class="card-t">Notifications<span class="tip-i" data-i="notifs">i</span></div>
-<div id="notifStatus" style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px"></div>
+<div id="notifStatus" style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px"></div>
+<div id="swEtat" style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px"></div>
 <button class="btn-engage" style="margin-top:0" id="btnNotif" onclick="activerNotifs()">Activer sur cet appareil</button>
 <div id="notifDevices" style="margin-top:8px"></div>
 <div class="card-t" style="margin-top:14px">Historique des notifications<span class="tip-i" data-i="notifhisto">i</span></div>
@@ -452,7 +453,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=17; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=18; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -467,6 +468,9 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:18,date:'2026-07-18',origine:"Paul : le point du samedi est arriv\u00e9 par mail mais aucune notification \u2014 et m\u00eame le test manuel restait invisible",
+ch:["CAUSE TROUV\u00c9E : deux service workers se disputaient le m\u00eame scope. Celui de la PWA \u00e9crasait celui des notifications \u00e0 chaque ouverture de l'app \u2014 le serveur envoyait dans le vide (FCM r\u00e9pondait OK, mais plus personne n'\u00e9coutait)","Un SEUL service worker d\u00e9sormais : cache, partage Android et notifications dans le m\u00eame fichier","Filet de s\u00e9curit\u00e9 : m\u00eame si le SDK Firebase ne prend pas la main, le push est affich\u00e9 quand m\u00eame","L'\u00e9tat du service worker est affich\u00e9 dans Comptes : un silence ne sera plus jamais invisible","Historique des notifications en relief, avec l'heure exacte"],
+cons:["Apr\u00e8s le push : ferme compl\u00e8tement l'app, rouvre-la, puis refais Activer sur cet appareil (des deux c\u00f4t\u00e9s)","V\u00e9rifie ensuite avec debugPush : la notification doit appara\u00eetre sur les deux t\u00e9l\u00e9phones"]},
 {v:17,date:'2026-07-18',origine:"Solde des dettes techniques + poste cantine (Paul, session du 17/07)",
 ch:["Poste Cantine d\u00e9di\u00e9 : les recharges \u00c9cole Directe (RAL) ont leur enveloppe, s\u00e9par\u00e9es des Fixes","R\u00e8gle S.M. Autos \u2192 V\u00e9hicule (achat voiture, 4 d\u00e9bits d'un m\u00eame achat fractionn\u00e9)","Panneau Regles de nommage : tu vois, filtres et retires ce que l'appli reconnait toute seule","Sauvegarde automatique avant chaque import : un retour arri\u00e8re est toujours possible","Fiches PayPal et Amazon : la ligne opaque s'ouvre sur le d\u00e9tail des marchands / articles (si le CSV d'analyse est import\u00e9)","Menu cat\u00e9gories complet dans les fiches (P\u00e9ages, V\u00e9hicule, Cantine, Remboursement)"],
 cons:["Importe les CSV PayPal et Amazon pour que les fiches opaques se d\u00e9taillent","Va voir le panneau Regles de nommage dans l'onglet Regles"]},
@@ -1298,7 +1302,9 @@ if(!('Notification'in window)){alert('Ce navigateur ne g\u00e8re pas les notific
 try{
 const perm=await Notification.requestPermission();
 if(perm!=='granted'){alert('Permission refus\u00e9e. Active-la dans les r\u00e9glages du navigateur.');return}
-const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
+/* UN SEUL service worker par scope : on r\u00e9utilise sw.js (qui g\u00e8re cache, partage ET push).
+   Enregistrer un second SW ici l'\u00e9craserait \u2014 c'\u00e9tait le bug des notifications muettes. */
+const reg=await navigator.serviceWorker.register('sw.js');
 await navigator.serviceWorker.ready;
 const messaging=firebase.messaging();
 const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
@@ -1311,9 +1317,18 @@ await notifLocale(pend?'\u2705 Budget Meney install\u00e9 et notifications activ
 updateNotifs()}catch(e){alert('Erreur : '+e.message)}}
 function retirerAppareil(id){
 if(confirm('Retirer cet appareil ? Il ne recevra plus de notifications.'))write('fcmTokens/'+id,null)}
+async function etatSW(){
+try{
+const regs=await navigator.serviceWorker.getRegistrations();
+if(!regs.length)return{ok:false,txt:'Aucun service worker actif : les notifications ne peuvent pas s\u2019afficher.'};
+const actif=regs.map(r=>((r.active&&r.active.scriptURL)||'').split('/').pop()).filter(Boolean);
+const okPush=actif.some(u=>u==='sw.js');
+return{ok:okPush,txt:okPush?'Service worker actif ('+actif.join(', ')+') \u2014 pr\u00eat \u00e0 recevoir.':'Service worker actif : '+actif.join(', ')+' \u2014 il ne g\u00e8re PAS les notifications. Ferme et rouvre l\u2019app.'};
+}catch(e){return{ok:false,txt:'\u00c9tat du service worker inconnu.'}}}
 function updateNotifs(){
 const st=document.getElementById('notifStatus');const dv=document.getElementById('notifDevices');
 if(!st)return;
+etatSW().then(s=>{const el=document.getElementById('swEtat');if(el)el.innerHTML='<span style="color:'+(s.ok?'var(--green)':'var(--red)')+'">\u25cf</span> '+s.txt});
 const toks=Object.entries(D.fcmTokens||{});
 const mine=localStorage.getItem('fcmTok');
 const actif=mine&&toks.some(([id])=>id===mine)&&Notification.permission==='granted';
