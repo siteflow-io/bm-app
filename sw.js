@@ -56,8 +56,14 @@ const url=new URL(e.request.url);
 if(e.request.method==='POST'&&url.pathname.endsWith('/share-import')){
 e.respondWith((async()=>{
 const fd=await e.request.formData();
-const files=fd.getAll('csvfiles');
 const cache=await caches.open('shared-files');
+/* texte partage (Google Lens, presse-papier d'une autre app) */
+const txt=fd.get('text')||fd.get('title')||'';
+if(txt&&String(txt).trim().length>20){
+await cache.put('./shared-text/'+Date.now(),new Response(String(txt),{headers:{'Content-Type':'text/plain;charset=utf-8'}}));
+return Response.redirect('./index.html?shared=texte','303')}
+/* fichiers (CSV bancaires, PayPal, Amazon, JSON de retour) */
+const files=fd.getAll('csvfiles');
 for(let i=0;i<files.length;i++){
 const f=files[i];
 await cache.put('./shared/'+Date.now()+'_'+i,new Response(await f.arrayBuffer(),{headers:{'X-Filename':encodeURIComponent(f.name||'partage.csv')}}))}
