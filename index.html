@@ -238,6 +238,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
 </div></div>
 
+<!-- TICKET -->
+<div class="ovl" id="ovlTicket"><div class="ovl-box"><div class="ovl-t">Ticket<span onclick="fermerTicket()" style="float:right;cursor:pointer;color:var(--text-muted)">✕</span></div><div id="ovlTicketBody"></div><button class="btn-engage" onclick="enregistrerTicket()">Enregistrer</button></div></div>
 <!-- TUTORIEL -->
 <div class="tuto-shield" id="tutoShield"><div class="tuto-spot" id="tutoSpot"></div><div class="tuto-bulle" id="tutoBulle"><div class="tb-prog" id="tbProg"></div><div class="tb-txt" id="tbTxt"></div><div class="tb-btns"><button class="tb-skip" onclick="tutoStop()">Quitter</button><button class="tb-next" id="tbNext" onclick="tutoNext()">Suivant</button></div></div></div>
 <!-- DÉTAIL D'UN MOIS -->
@@ -366,6 +368,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="hdr"><h1>Comptes &amp; données</h1><p>Soldes, imports, export</p></div>
 <div class="card"><div class="card-t">Comptes<span class="tip-i" data-i="cpt">i</span></div><div id="cptList"></div>
 <div id="addCptBox" style="margin-top:10px"></div>
+<div class="card"><div class="card-t">Tickets<span class="tip-i" data-i="tickets">i</span></div><div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px">Google Lens → Sélectionner du texte → Copier, puis touche ce bouton. Ou partage le texte directement vers Budget.</div><button class="btn-engage" style="margin-top:0" onclick="collerTicket()">Coller un ticket</button><div id="tkList" style="margin-top:8px"></div></div>
 <div class="row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px"><div class="row-l" style="font-weight:800;color:var(--text)">Liquidités + épargne</div><div class="row-v" id="patN" style="font-size:15px">--</div></div>
 </div>
 <div style="text-align:right;margin-bottom:4px"><span style="font-size:11px;font-weight:700;color:var(--text-muted)">Compte de destination</span><span class="tip-i" data-i="impsel">i</span></div><div class="imp-sel" id="accSel"></div>
@@ -455,7 +458,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=20; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=21; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -470,6 +473,9 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:21,date:'2026-07-18',origine:"Reprendre le contr\u00f4le du ticket : le relev\u00e9 dit ce qu'on a pay\u00e9, le ticket dit ce qu'on a achet\u00e9",
+ch:["Nouveau : COLLER UN TICKET (onglet Comptes). Google Lens \u2192 S\u00e9lectionner du texte \u2192 Copier, puis un bouton","Le partage Android accepte d\u00e9sormais le TEXTE : partage direct depuis Lens si ton menu le propose","L'appli lit l'enseigne, la date, le total, les articles, et les ventile par rayon","Ticket de carburant reconnu \u00e0 part : litres et prix au litre extraits, avec contr\u00f4le de coh\u00e9rence","Rattachement propos\u00e9 \u00e0 l'op\u00e9ration bancaire correspondante (m\u00eame p\u00e9riode, montant proche)","Le texte brut est TOUJOURS conserv\u00e9 : si le d\u00e9codage est imparfait, il s'affine sans rien reperdre"],
+cons:["Capture deux ou trois tickets r\u00e9els (un plein, une course) et envoie-les \u00e0 Claude : le d\u00e9codage sera taill\u00e9 sur tes vrais tickets"]},
 {v:20,date:'2026-07-18',origine:"Captures de Paul : Cantine et Chauffage absents des enveloppes, lignes illisibles, zones grises toujours l\u00e0",
 ch:["BUG DE FOND corrig\u00e9 : les nouveaux r\u00e9glages livr\u00e9s avec une version n'atteignaient jamais l'app, car la configuration d\u00e9j\u00e0 enregistr\u00e9e les \u00e9crasait. Cantine et Chauffage apparaissent enfin","Lignes d'enveloppe lisibles : le nom reste seul sur sa ligne, les mentions (sous-\u00e9valu\u00e9e, report) passent en dessous en petit","Zones grises d\u00e9finitivement supprim\u00e9es : une p\u00e9riode sans achat n'est pas une anomalie"],
 cons:["V\u00e9rifie que Cantine et Chauffage sont bien l\u00e0 dans Mois","Il reste le second fichier de r\u00e8gles \u00e0 importer (34 r\u00e8gles : Total, Conforama, PPG, tabac\u2026)"]},
@@ -540,6 +546,15 @@ return cfg}
 let CFG=null,CIBLE=0,EPARGNE_CIBLE=0,REVENUS_REF=0,FIXES_REF=0,ENV={},COMPTES={};
 let SEUIL_EXCEP=250;
 function applyCfg(){CIBLE=CFG.cible;EPARGNE_CIBLE=CFG.epargneCible;REVENUS_REF=CFG.revenusRef;FIXES_REF=CFG.fixesRef;ENV=CFG.env;COMPTES=CFG.comptes;SEUIL_EXCEP=CFG.seuilExcep||250}
+function updateTickets(){
+const el=document.getElementById('tkList');if(!el)return;
+const ts=Object.entries(D.tickets||{}).sort((a,b)=>b[1].ts-a[1].ts).slice(0,6);
+if(!ts.length){el.innerHTML='';return}
+el.innerHTML='<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:8px 0 4px">'+Object.keys(D.tickets||{}).length+' ticket(s) enregistr\u00e9(s)</div>'
++ts.map(([id,t])=>'<div class="row"><div class="row-l" style="font-size:11px">'+(t.enseigne||(t.type==='carburant'?'Carburant':'Ticket'))
++'<span style="font-weight:500;color:var(--text-muted)"> \u00b7 '+(t.date?t.date.split('-').reverse().join('/'):new Date(t.ts).toLocaleDateString('fr-FR'))
++(t.lignes&&t.lignes.length?' \u00b7 '+t.lignes.length+' articles':'')+(t.litres?' \u00b7 '+t.litres+' L':'')+(t.op?' \u00b7 rattach\u00e9':'')+'</span></div>'
++'<div class="row-v" style="font-size:11px">'+(t.total?fm(t.total):'\u2014')+'</div></div>').join('');}
 function updateAddCompte(){
 const el=document.getElementById('addCptBox');if(!el)return;
 if(el.dataset.open==='1')return;
@@ -684,7 +699,7 @@ return all}
 /* ================= DATA LAYER ================= */
 const FB_ON=!!FIREBASE_CONFIG.apiKey;
 const SK='budgetMeneyV2';
-let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{},devlogVus:{},notes:{},tutoVus:{},az:{},snapshots:{},reports:{}};
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{},devlogVus:{},notes:{},tutoVus:{},az:{},snapshots:{},reports:{},tickets:{}};
 let fbdb=null;
 function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
 function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
@@ -702,7 +717,7 @@ firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
 firebase.auth().onAuthStateChanged(u=>{
 if(!u){document.getElementById('ovlLogin').classList.add('show');return}
 document.getElementById('ovlLogin').classList.remove('show');
-fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{},tutoVus:v.tutoVus||{},az:v.az||{},snapshots:v.snapshots||{},reports:v.reports||{}};
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{},tutoVus:v.tutoVus||{},az:v.az||{},snapshots:v.snapshots||{},reports:v.reports||{},tickets:v.tickets||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
 CFG=fusionnerDefauts(D.config);applyCfg();refresh()})})}
@@ -875,6 +890,17 @@ e.target.value='';
 importerFichiers(items)});
 /* Consommation des fichiers re\u00e7us par partage Android */
 let sharedConsumed=false;
+async function consommerPartageTexte(){
+if(!location.search.includes('shared=texte'))return;
+if(!CFG||(FB_ON&&!firebase.auth().currentUser))return;
+try{
+const cache=await caches.open('shared-files');
+const keys=(await cache.keys()).filter(k=>k.url.includes('/shared-text/'));
+if(!keys.length)return;
+const r=await cache.match(keys[0]);const txt=await r.text();
+for(const k of keys)await cache.delete(k);
+history.replaceState(null,'',location.pathname);
+if(txt&&txt.trim().length>20)ouvrirTicket(txt)}catch(e){}}
 async function consommerPartage(){
 if(sharedConsumed||!location.search.includes('shared=1'))return;
 if(!CFG||(FB_ON&&!firebase.auth().currentUser))return; /* retent\u00e9 au prochain refresh */
@@ -1537,6 +1563,119 @@ if(!cmd[num])cmd[num]={date:c[iDate],amt:parseFloat(c[iTot])||0,titres:[]};
 if(c[iTitre])cmd[num].titres.push(c[iTitre].slice(0,80))}
 return Object.entries(cmd).map(([num,v])=>({k:'az'+num.replace(/[^0-9]/g,'').slice(0,18),num,date:v.date,amt:v.amt,titres:v.titres}))}
 
+/* ================= TICKETS (Google Lens / presse-papier) ================= */
+/* Extracteur GÉNÉRIQUE : il ne devine rien, il repère ce qui est certain
+   (montants en fin de ligne, total, date, volume de carburant) et laisse
+   le reste au texte brut, conservé tel quel pour affiner plus tard. */
+function parseTicket(txt){
+const lignes=String(txt||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
+const T={brut:String(txt||''),type:'courses',date:null,total:null,lignes:[],enseigne:null,litres:null,prixL:null};
+const num=s=>{const m=String(s).replace(/\s/g,'').match(/(\d+)[.,](\d{2})\b/);return m?parseFloat(m[1]+'.'+m[2]):null};
+/* enseigne : premières lignes en majuscules */
+for(const l of lignes.slice(0,6)){
+if(/INTERMARCHE|CARREFOUR|LECLERC|SUPER ?U|HYPER ?U|LIDL|ALDI|ACTION|TOTAL ?ACCESS|AVIA|SHELL|ESSO|BRICO|DECATHLON|GAMM/i.test(l)){T.enseigne=l.slice(0,32);break}}
+/* date jj/mm/aaaa ou jj-mm-aa */
+for(const l of lignes){const m=l.match(/(\d{2})[\/.-](\d{2})[\/.-](\d{2,4})/);
+if(m){let a=m[3];if(a.length===2)a='20'+a;T.date=a+'-'+m[2]+'-'+m[1];break}}
+/* carburant : volume + prix au litre */
+for(const l of lignes){
+const v=l.match(/(\d+[.,]\d{1,3})\s*(?:L\b|LITRE|LTR)/i);
+if(v&&!T.litres)T.litres=parseFloat(v[1].replace(',','.'));
+const p=l.match(/(\d[.,]\d{3})\s*(?:€|EUR)?\s*\/?\s*L\b/i);
+if(p&&!T.prixL)T.prixL=parseFloat(p[1].replace(',','.'));}
+if(T.litres||/GAZOLE|GASOIL|SP ?95|SP ?98|E10|DIESEL|SANS PLOMB/i.test(txt))T.type='carburant';
+/* total : la ligne qui le dit, sinon le plus gros montant */
+let tot=null;
+for(const l of lignes){
+if(/TOTAL|A PAYER|MONTANT (?:DU|A PAYER)|NET A PAYER|CB EMV|CARTE BANCAIRE/i.test(l)&&!/SOUS.?TOTAL/i.test(l)){
+const v=num(l);if(v!==null&&(tot===null||v>tot))tot=v}}
+/* lignes d'articles : libellé + montant en fin de ligne */
+for(const l of lignes){
+if(/TOTAL|A PAYER|RENDU|ESPECE|CARTE|CB |TVA|REMISE|CAISSE|MERCI|TICKET|SIRET|TEL|www\.|\.fr\b/i.test(l))continue;
+const m=l.match(/^(.{3,}?)\s+(\d+[.,]\d{2})\s*(?:€|EUR)?$/);
+if(m){const p=parseFloat(m[2].replace(',','.'));
+if(p>0&&p<2000)T.lignes.push({nom:m[1].trim().slice(0,48),prix:p})}}
+if(tot===null&&T.lignes.length)tot=Math.round(T.lignes.reduce((s,x)=>s+x.prix,0)*100)/100;
+T.total=tot;
+return T}
+
+/* Rayons : dictionnaire ouvert, complété au fil des tickets réels. */
+const RAYONS=[
+[/CHOIX DU PRIMEUR|PRIMEUR|BANANE|POMME|TOMATE|SALADE|CAROTTE|COURGETTE|MELON|FRAISE|LEGUME|FRUIT/i,'Fruits & légumes'],
+[/CHOIX DU CHARCUTIER|BOUCHER|VIANDE|POULET|BOEUF|PORC|JAMBON|SAUCISS|BOUDIN|STEAK|LARDON/i,'Viande & charcuterie'],
+[/POISSON|SAUMON|CABILLAUD|CREVETTE|THON|MOULE/i,'Poisson'],
+[/PATURAGES|CHOIX DU FROMAGER|LAIT|YAOURT|BEURRE|CREME|FROMAGE|MOZZA|FETA|COMTE|CHEVRE/i,'Crémerie'],
+[/BIERE|VIN\b|ROSE\b|WHISKY|RHUM|PASTIS|CHAMPAGNE|CIDRE|APERO/i,'Alcool'],
+[/SHAMPOOING|GEL DOUCHE|DENTIFRICE|SAVON|DEODOR|RASOIR|COUCHE|HYGIENE|TOILETTE INTIME/i,'Hygiène'],
+[/PAPIER TOILETTE|ESSUIE|LESSIVE|LIQUIDE VAISSELLE|NETTOY|JAVEL|SAC POUBELLE|EPONGE/i,'Entretien'],
+[/CHIPS|BONBON|CHOCOLAT|BISCUIT|GATEAU|GLACE|MADELEINE|TARTINE|CRACOTTE|APERITIF/i,'Grignotage & sucré'],
+[/CAFE|THE\b|JUS\b|SODA|COLA|EAU\b|SIROP|INFUSION/i,'Boissons'],
+[/GAZOLE|GASOIL|SP ?95|SP ?98|E10|DIESEL|SANS PLOMB/i,'Carburant'],
+];
+function rayonDe(nom){for(const[re,l]of RAYONS)if(re.test(nom))return l;return 'Épicerie'}
+/* --- Ecran de validation d'un ticket --- */
+let ticketEnCours=null;
+async function collerTicket(){
+let txt='';
+try{txt=await navigator.clipboard.readText()}
+catch(e){txt=prompt('Colle ici le texte du ticket (Google Lens \u2192 S\u00e9lectionner du texte \u2192 Copier) :')||''}
+if(!txt||txt.trim().length<20){alert('Rien \u00e0 lire dans le presse-papier. Passe par Google Lens : S\u00e9lectionner du texte, puis Copier.');return}
+ouvrirTicket(txt)}
+function ouvrirTicket(txt){
+ticketEnCours=parseTicket(txt);
+const T=ticketEnCours;
+const cands=candidatsOp(T);
+const el=document.getElementById('ovlTicketBody');
+el.innerHTML=
+'<div class="fld"><label>Type</label><select id="tkType" onchange="majTicketType()">'
++'<option value="courses"'+(T.type==='courses'?' selected':'')+'>Courses / achats</option>'
++'<option value="carburant"'+(T.type==='carburant'?' selected':'')+'>Carburant</option></select></div>'
++(T.enseigne?'<div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">'+T.enseigne+(T.date?' \u00b7 '+T.date.split('-').reverse().join('/'):'')+'</div>':'')
++'<div class="fld"><label>Total lu sur le ticket</label><input id="tkTotal" inputmode="decimal" value="'+(T.total!==null?T.total.toFixed(2):'')+'"></div>'
++(T.type==='carburant'?'<div class="fld"><label>Litres</label><input id="tkLitres" inputmode="decimal" value="'+(T.litres||'')+'"></div><div class="fld"><label>Prix au litre</label><input id="tkPrixL" inputmode="decimal" value="'+(T.prixL||'')+'"></div>':'')
++'<div class="fld"><label>Rattacher \u00e0 une op\u00e9ration bancaire</label><select id="tkOp">'
++'<option value="">\u2014 aucune pour l\'instant \u2014</option>'
++cands.map(c=>'<option value="'+c.id+'">'+c.date.split('-').reverse().join('/')+' \u00b7 '+fm(Math.abs(c.amt))+' \u00b7 '+(c.lib||'').slice(0,22)+(c.ecart?' (\u00e9cart '+c.ecart+')':'')+'</option>').join('')
++'</select></div>'
++(T.lignes.length?'<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 4px">'+T.lignes.length+' ligne(s) lue(s) \u2014 ventilation :</div>'+ventilHtml(T):'<div style="font-size:11px;font-weight:600;color:#92400e;margin:8px 0">Aucune ligne d\'article reconnue. Le texte brut sera conserv\u00e9 tel quel : envoie-le \u00e0 Claude pour affiner le d\u00e9codage.</div>')
++'<details style="margin-top:10px"><summary style="font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer">Voir le texte brut</summary><pre style="font-size:10px;white-space:pre-wrap;color:var(--text-muted);max-height:180px;overflow:auto">'+T.brut.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])).slice(0,4000)+'</pre></details>';
+document.getElementById('ovlTicket').classList.add('show')}
+function ventilHtml(T){
+const par={};
+for(const l of T.lignes){const r=rayonDe(l.nom);par[r]=(par[r]||0)+l.prix}
+const tot=Object.values(par).reduce((s,v)=>s+v,0)||1;
+return Object.entries(par).sort((a,b)=>b[1]-a[1]).map(([r,v])=>
+'<div class="row"><div class="row-l" style="font-size:12px">'+r+'</div><div class="row-v" style="font-size:12px">'+fm(v)+' <span style="color:var(--text-muted);font-weight:600">('+Math.round(100*v/tot)+'%)</span></div></div>').join('')}
+function majTicketType(){if(!ticketEnCours)return;ticketEnCours.type=document.getElementById('tkType').value;ouvrirTicket(ticketEnCours.brut)}
+function candidatsOp(T){
+const tot=T.total;const out=[];
+const d0=T.date?new Date(T.date):new Date();
+for(const t of txReal()){
+if(t.amt>=0)continue;
+const dj=Math.abs((new Date(t.date)-d0)/864e5);
+if(dj>4)continue;
+const ec=tot?Math.abs(Math.abs(t.amt)-tot):null;
+if(tot&&ec>Math.max(8,tot*0.05))continue;
+out.push({id:t._acc+'|'+t.k,date:t.date,amt:t.amt,lib:libHumain(t).nom,ecart:ec?fm(ec):null,dj:dj})}
+return out.sort((a,b)=>(a.ecart?parseFloat(a.ecart):99)-(b.ecart?parseFloat(b.ecart):99)||a.dj-b.dj).slice(0,8)}
+function fermerTicket(){document.getElementById('ovlTicket').classList.remove('show');ticketEnCours=null}
+function enregistrerTicket(){
+if(!ticketEnCours)return;
+const T=ticketEnCours;
+T.type=document.getElementById('tkType').value;
+const tv=parseFloat((document.getElementById('tkTotal').value||'').replace(',','.'));
+if(!isNaN(tv))T.total=tv;
+if(T.type==='carburant'){
+const l=parseFloat((document.getElementById('tkLitres')||{}).value||'');if(!isNaN(l))T.litres=l;
+const p=parseFloat((document.getElementById('tkPrixL')||{}).value||'');if(!isNaN(p))T.prixL=p;}
+const op=document.getElementById('tkOp').value||null;
+const id='t'+Date.now();
+const rec={ts:Date.now(),par:userEmail(),type:T.type,date:T.date,enseigne:T.enseigne,total:T.total,
+litres:T.litres,prixL:T.prixL,op:op,brut:T.brut.slice(0,20000),
+lignes:T.lignes.map(l=>({n:l.nom,p:l.prix,r:rayonDe(l.nom)}))};
+write('tickets/'+id,rec);
+fermerTicket();
+alert('Ticket enregistr\u00e9'+(op?' et rattach\u00e9 \u00e0 l\'op\u00e9ration.':'. Tu pourras le rattacher plus tard.'));}
 /* ================= ÉCHANGE AVEC CLAUDE ================= */
 const PROMPT_CLAUDE=`Tu re\u00e7ois l'export JSON de l'application Budget Meney (suivi budg\u00e9taire familial, cat\u00e9gories : courses, carburant, peage, sante, trav, abo, ext, fix, vac, ess, rev).
 MISSION : analyser les transactions (n\u0153ud tx), rep\u00e9rer les libell\u00e9s obscurs ou mal cat\u00e9goris\u00e9s, les ch\u00e8ques sans b\u00e9n\u00e9ficiaire, les incoh\u00e9rences (doublons, virements internes non appari\u00e9s, \u00e9carts) \u2014 ET auditer un \u00e9chantillon des libell\u00e9s D\u00c9J\u00c0 class\u00e9s \u00e0 fort montant : une r\u00e8gle fausse qui classe avec aplomb est pire qu'un non-class\u00e9.
@@ -1581,7 +1720,7 @@ if(s.config)write('config',s.config);
 if(s.cheques)write('cheques',s.cheques);
 alert('Etat restaure.');}
 function exportJson(){
-const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,devlogVus:D.devlogVus,notes:D.notes,tutoVus:D.tutoVus,az:D.az,reports:D.reports,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
+const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,devlogVus:D.devlogVus,notes:D.notes,tutoVus:D.tutoVus,az:D.az,reports:D.reports,tickets:D.tickets,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
 const blob=new Blob([JSON.stringify(dump,null,1)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);
 a.download='budget-export-'+new Date().toISOString().slice(0,10)+'.json';
@@ -2012,6 +2151,7 @@ tuto:"<b>Visite guidée.</b> Des chapitres courts, rejouables à volonté, qui m
 devlog:"<b>Journal de développement.</b> Toute la vie de l'appli, version par version : d'où vient chaque décision, ce qui a changé, les consignes données, et qui a dit Compris, quand. À chaque nouvelle version, le panneau Quoi de neuf s'affiche une fois : lis, fais ce qu'il y a à faire, touche Compris — c'est archivé ici. Pour remonter l'origine d'un choix ou d'un débogage, c'est la mémoire du chantier.",
 cibles:"<b>Cibles en vigueur.</b> Les chiffres que toute l'appli utilise en ce moment. Ils vivent dans Firebase, pas dans le code. Pour les changer : le verrou ci-dessous. Tout changement est noté au journal.",
 reglesnom:"<b>Regles de nommage.</b> La memoire de l'appli : chaque renommage ou import cree une regle ici, qui s'applique a tout l'historique et aux imports futurs. Filtre, et retire une regle fausse (les operations repassent en Non classe).",
+tickets:"<b>Tickets.</b> Le relevé bancaire dit combien tu as payé ; le ticket dit ce que tu as acheté. Avec Google Lens : photo, Sélectionner du texte, Copier — puis Coller un ticket ici. L'appli lit le total, les articles, et pour un plein les litres et le prix au litre. Elle propose de le rattacher à l'opération bancaire correspondante (même montant, même période). Le texte brut est toujours conservé : si le décodage est imparfait, envoie-le à Claude pour l'affiner.",
 pending:"<b>Demandes en cours.</b> Chaque demande d'assouplissement s'affiche ici, chez vous deux, avec un compte à rebours de 72 h. Trois sorties : tu annules (tout de suite, toujours possible) · l'autre approuve depuis son téléphone (tout de suite) · le délai passe ET tu confirmes. Si tu ne reviens pas confirmer, rien ne change.",
 verrou:"<b>Verrou intelligent.</b> DURCIR une cible (dépenser moins, épargner plus) : tout de suite. L'ADOUCIR (dépenser plus, épargner moins) : 72 h d'attente + confirmation, ou l'accord de l'autre. On n'approuve jamais sa propre demande. Tout est noté au journal, avec le nom et la date.",
 defi:"<b>Défi en cours.</b> Un engagement pris depuis l'onglet Simu : dépenser moins qu'un plafond, pendant un nombre de mois donné. Le défi démarre le 1er du mois suivant. Chaque mois passé est jugé : tenu ou raté, avec le montant. TOUT compte, même l'imprévu — c'est le principe d'un défi court. Le compteur 'dégagé' fait la somme de ce que tu as vraiment mis de côté par rapport à la cible normale. À la fin : réussi ou manqué, et ça reste dans l'historique — l'abandon aussi. Un seul défi à la fois. Claire voit tout.",
@@ -2064,7 +2204,7 @@ else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 updateBlocage();consommerPartage();
 const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
-buildAccSel();updateProjection();updateResteVivre();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();updateCfgSpans();updateDevlog();updateTutoMenu();updateReglesPanel();updateAddCompte();if(!D._tutoP){D._tutoP=1;setTimeout(proposerTuto,1200)}
+buildAccSel();updateProjection();updateResteVivre();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();updateCfgSpans();updateDevlog();updateTutoMenu();updateReglesPanel();updateAddCompte();updateTickets();consommerPartageTexte();if(!D._tutoP){D._tutoP=1;setTimeout(proposerTuto,1200)}
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
 const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
