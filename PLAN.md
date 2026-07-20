@@ -1,7 +1,7 @@
 # Budget Meney — plan de travail
 
 > Document vivant. Mis à jour à chaque décision, chaque livraison, chaque nouvelle idée.
-> Dernière mise à jour : 18/07/2026 — v21 livrée (chaîne ticket opérationnelle).
+> Dernière mise à jour : 19/07/2026 — v22 livrée : dette code soldée intégralement.
 
 ---
 
@@ -76,10 +76,10 @@ exactement ce que la provision doit empêcher). **Rien payé en 2026 : la livrai
 
 ## 4. Dette — terrain (Paul)
 
-- [ ] Importer `budget-retour-2.json` (34 règles) — *fait le 18/07 ?*
-- [ ] Importer le CSV **PayPal** (153 opérations, 13 446 € opaques) et le CSV **Amazon** (162 commandes)
+- [x] ~~budget-retour-2.json~~ (importé — 82 règles perso en base) · [x] ~~PayPal~~ (175 opérations le 17/07)
+- [ ] Importer le CSV **Amazon** (162 commandes — toujours absent, `az` vide)
 - [ ] Nommer les **43 chèques** restants au talon (dont `paul_64`, 250 € du 04/04/2025)
-- [ ] Recoller `code.gs` dans Apps Script
+- [ ] Recoller `code.gs` dans Apps Script (**version v22 fournie** : notif de version, TTL, samedi 9 h)
 - [ ] Valider les notifications : `debugPush` → la notification doit **apparaître** sur les deux téléphones
 - [ ] **LDDS de Claire** (celui de Paul créé le 18/07, virement permanent 300 € depuis son compte perso)
 - [ ] Ajouter les deux LDDS dans l'app (bouton « + Ajouter un compte », onglet Comptes)
@@ -92,18 +92,24 @@ exactement ce que la provision doit empêcher). **Rien payé en 2026 : la livrai
 
 ## 5. Dette — code (Claude)
 
-### Décidé, pas encore écrit
-- **Argent réservé vs disponible.** L'app affiche 31 157 € d'épargne alors que 22 959 € sont engagés.
-  Réserves nommées, écrites par l'utilisateur, déduites de l'épargne libre (trajectoire, paliers).
-- **Alerte de solde prévisionnel.** Projeter chaque compte à 30 jours avec les prélèvements connus
-  (crédit le 5, assurances, abonnements) → « le Commun sera à −300 € le 5 août ».
-- **Suivi des salaires.** DRFIP par personne, mois de rémunération lu dans le libellé, écarts et variations.
-- **Notification à chaque nouvelle version** (auto-test permanent de la chaîne push).
-- **Reclasser une opération seule**, sans créer de règle (indispensable pour les pleins en supermarché).
-- **Trois corrections de règles** : `ELECLERC CARBURANTS` → Carburant · `HYPER U STATIO` → Carburant ·
-  `STATIONNT HORO` → Péages (ce sont des horodateurs).
-- **Recalibrage des enveloppes** (voir §6).
-- Décaler le point du samedi vers 9-10 h + TTL sur le message FCM.
+### Soldé en v22 (19/07)
+- ✅ **Argent réservé** : réserves nommées (nœud `reserves/`), épargne LIBRE dans trajectoire/paliers/zéro.
+- ✅ **Alerte de solde prévisionnel 30 j** : récurrents détectés par libellé + ordre de grandeur
+  (deux crédits sous le même libellé = deux récurrents), projection par compte courant, anomalie datée.
+  *Vérifié sur données réelles : « Commun → −2 061 € vers le 16/08 ».*
+- ✅ **Suivi des salaires** DRFIP par personne (carte dans Mois, écart vs moyenne 12 mois).
+- ✅ **Notification de version** (code.gs `notifVersion()`, PropertiesService) = auto-test permanent.
+- ✅ **« Cette opération seulement »** : overrides par opération (nœud `overrides/`), appliqués en dernier.
+- ✅ **Corrections carburant** : ELECLERC CARBURANTS, HYPER U STATIO → Carburant · STATIONNT HORO → Péages.
+- ✅ **Samedi décalé 9-11 h + TTL 24 h** sur les messages FCM (code.gs).
+- ✅ **Bugs de classement** : motif « DR » réparé automatiquement au chargement (matchait « SAINT ANDR ») ;
+  les règles perso s'appliquent par SPÉCIFICITÉ décroissante (motif long = prioritaire) — le reclassement
+  manuel l'emporte enfin sur les règles génériques.
+
+### Reste à faire (code)
+- **Recalibrage des enveloppes** (voir §6) — attend les moyennes réelles des postes manquants.
+- **Notifications app fermée** : TTL fait côté serveur ; le reste est un réglage TÉLÉPHONE (Honor endort
+  Chrome). Procédure documentée dans le ⓘ Notifications. À faire par Paul sur les deux appareils.
 
 ### Réglages à l'usage
 - Seuil des dépenses exceptionnelles (250 €)
@@ -176,6 +182,27 @@ le suivi de consommation du T4 (80 L, gazole) et le coût kilométrique.
 Prérequis caché derrière tout ça : aujourd'hui une opération n'a qu'une seule catégorie. Un passage à
 146 € contenant 80 € de gazole et 66 € de courses doit pouvoir devenir deux lignes.
 
+### I. Le liquide hors circuit — GERME À CADRER (ouvert le 19/07)
+Constat fondateur : le ticket Super U de Paul, payé en espèces issues de la **vente d'une moto**
+achetée six ans plus tôt — un argent qui n'a JAMAIS transité par un compte. L'app ne voit que les
+CSV bancaires : tout le liquide de la main à la main (ventes entre particuliers, cadeaux, marchés,
+remboursements en billets) est structurellement invisible.
+**LIVRÉ en v24 — première moitié du chantier** : chaque retrait est un sas à ventiler (parts :
+montant + catégorie + nom dicible, ou ticket espèces rattaché) ; les parts rejoignent leurs vraies
+familles dans Dépenses et Enveloppes (somme conservée au centime) ; le non-classé reste « Liquide en
+poche ». Carte « Liquide à classer » dans Mois : 1 088 € détectés sur 12 mois.
+**Seconde moitié à cadrer** — les ENTRÉES d'espèces hors banque (vente moto, cadeaux) :
+piste : un **portefeuille Espèces** virtuel — solde approximatif déclaré, crédité automatiquement
+par les retraits DAB (visibles dans les CSV, aujourd'hui opaques : l'argent « disparaît »), crédité
+manuellement par les événements déclarés (« vente moto : +X € »), débité par les tickets espèces
+enregistrés (le champ `especes:true` des tickets est déjà stocké depuis la v23 — agrégeable
+rétroactivement). Recalé quand Paul compte réellement son portefeuille.
+Philosophie : suivi à GROS GRAIN — un solde d'ordre de grandeur, pas la comptabilité du moindre
+billet, sinon c'est intenable et personne ne le fera.
+**Questions à trancher avant tout code** : (a) un portefeuille commun ou un par personne ?
+(b) les retraits DAB l'alimentent-ils automatiquement ? (c) faut-il enregistrer les événements
+passés (la moto) ou partir d'un solde déclaré aujourd'hui ? (d) quel niveau d'alerte, s'il y en a un ?
+
 ### B. Souvenirs — moteur narratif déterministe
 Quatre familles : habitude + dernier passage + alternative chiffrée (piochée dans les Envies non cochées) ·
 « il y a un an » · records et séries · réussites cumulées.
@@ -246,3 +273,9 @@ Prévenir l'autre conjoint au-delà d'un seuil. **Nécessite l'accord explicite 
 | 18/07 | OCR natif du téléphone plutôt qu'OCR embarqué |
 | 18/07 | Google Lens n'offre que « Copier » → chemin presse-papier retenu, partage de texte en bonus |
 | 18/07 | Chaîne ticket construite en deux temps : capture d'abord (v21), parseur fin ensuite sur échantillons réels |
+| 19/07 | Les règles perso s'appliquent par spécificité décroissante ; un motif court sans frontière de mot est un bug |
+| 19/07 | Le reclassement d'UNE opération passe par un override, jamais par une règle déguisée |
+| 19/07 | L'épargne affichée est l'épargne LIBRE ; le réservé est visible mais hors trajectoire |
+| 19/07 | Récurrents : clé = libellé + ordre de grandeur (deux crédits homonymes = deux récurrents) |
+| 19/07 | L'app ne présume JAMAIS de l'origine du liquide — le cash peut vivre entièrement hors banque |
+| 19/07 | Un retrait est un SAS : ventilable par parts vers les vraies catégories, reliquat « en poche » visible |
