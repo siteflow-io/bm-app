@@ -238,6 +238,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <button class="btn-engage" onclick="doSetup()">Démarrer le suivi</button>
 </div></div>
 
+<!-- VENTILATION RETRAIT -->
+<div class="ovl" id="ovlVentil"><div class="ovl-box"><div class="ovl-t">Classer ce liquide<span onclick="fermerVentil()" style="float:right;cursor:pointer;color:var(--text-muted)">✕</span></div><div id="ovlVentilBody"></div></div></div>
 <!-- TICKET -->
 <div class="ovl" id="ovlTicket"><div class="ovl-box"><div class="ovl-t">Ticket<span onclick="fermerTicket()" style="float:right;cursor:pointer;color:var(--text-muted)">✕</span></div><div id="ovlTicketBody"></div><button class="btn-engage" onclick="enregistrerTicket()">Enregistrer</button></div></div>
 <!-- TUTORIEL -->
@@ -305,6 +307,8 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="hdr"><h1>Le mois</h1><p>Enveloppes, flux et courbes</p></div>
 <div class="card"><div class="card-t">Enveloppes du mois<span class="tip-i" data-i="env">i</span></div><div id="envList"></div></div>
 <div class="card"><div class="card-t">Dépenses du mois<span class="tip-i" data-i="dep">i</span></div><div id="depList"></div></div>
+<div class="card" id="liqCard" style="display:none"><div class="card-t">Liquide à classer<span class="tip-i" data-i="liquide">i</span></div><div id="liqBody"></div></div>
+<div class="card" id="salCard" style="display:none"><div class="card-t">Salaires<span class="tip-i" data-i="salaires">i</span></div><div id="salBody"></div></div>
 <div class="card"><div class="card-t">Revenus du mois<span class="tip-i" data-i="rev">i</span></div><div id="revList"></div></div>
 <div class="card"><div class="card-t">Rechercher<span class="tip-i" data-i="recherche">i</span></div>
 <input type="text" id="rechInp" placeholder="Decathlon, vétérinaire, chèque…" style="width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:var(--rs);background:var(--surface);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600" oninput="lancerRecherche()">
@@ -368,6 +372,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <div class="hdr"><h1>Comptes &amp; données</h1><p>Soldes, imports, export</p></div>
 <div class="card"><div class="card-t">Comptes<span class="tip-i" data-i="cpt">i</span></div><div id="cptList"></div>
 <div id="addCptBox" style="margin-top:10px"></div>
+<div class="card"><div class="card-t">Argent réservé<span class="tip-i" data-i="reserves">i</span></div><div id="resList"></div></div>
 <div class="card"><div class="card-t">Tickets<span class="tip-i" data-i="tickets">i</span></div><div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px">Google Lens → Sélectionner du texte → Copier, puis touche ce bouton. Ou partage le texte directement vers Budget.</div><button class="btn-engage" style="margin-top:0" onclick="collerTicket()">Coller un ticket</button><div id="tkList" style="margin-top:8px"></div></div>
 <div class="row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:4px"><div class="row-l" style="font-weight:800;color:var(--text)">Liquidités + épargne</div><div class="row-v" id="patN" style="font-size:15px">--</div></div>
 </div>
@@ -458,7 +463,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=21; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=24; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -473,6 +478,15 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par Claude \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:24,date:'2026-07-19',origine:"Paul : un retrait doit d\u00e9clencher la question \u2014 que vais-je faire de cet argent ? (le liquide hors circuit)",
+ch:["Un retrait d'esp\u00e8ces devient un SAS \u00c0 CLASSER : carte \u00ab Liquide \u00e0 classer \u00bb dans Mois, avec le total non class\u00e9 sur 12 mois","Chaque retrait se ventile par parts : un montant, une cat\u00e9gorie, un nom dicible (\u00ab Baby-sitter \u00bb, \u00ab March\u00e9 \u00bb, \u00ab Cadeau \u00bb) \u2014 ou un TICKET ESP\u00c8CES rattach\u00e9","Chaque part rejoint sa VRAIE famille dans les d\u00e9penses et les enveloppes du mois \u2014 la somme est conserv\u00e9e au centime par construction","Ce qui n'est pas class\u00e9 reste visible : \u00ab Liquide en poche \u00bb \u2014 sans jugement, \u00e0 gros grain","Toucher une part dans les d\u00e9penses rouvre la ventilation du retrait d'origine"],
+cons:["1 088 \u20ac de liquide non class\u00e9 t'attendent sur les 12 derniers mois \u2014 \u00e0 classer \u00e0 gros grain, ou \u00e0 laisser \u00ab en poche \u00bb si tu ne sais plus","Le liquide hors banque (vente de la moto\u2026) viendra dans un second temps : d\u00e9clarer une entr\u00e9e d'esp\u00e8ces \u2014 germe consign\u00e9 au plan"]},
+{v:23,date:'2026-07-19',origine:"Premier vrai ticket captur\u00e9 par Paul (Super U, St-Georges-de-Didonne) : Google Lens \u00e9parpille tout",
+ch:["Lecteur SUPER U / HYPER U d\u00e9di\u00e9 : recolle les fragments \u00e9parpill\u00e9s par Lens (nom, prix, quantit\u00e9 s\u00e9par\u00e9s)","Les RAYONS imprim\u00e9s par le magasin servent de v\u00e9rit\u00e9 (Boulangerie, Parfumerie, Surgel\u00e9\u2026) \u2014 rien \u00e0 deviner","L'\u00c9QUATION DU TICKET : quand des prix sont s\u00e9par\u00e9s de leur article, l'appli cherche la combinaison qui boucle EXACTEMENT sur le total imprim\u00e9 \u2014 le ticket se v\u00e9rifie lui-m\u00eame","R\u00e9paration des chiffres corrompus par l'OCR (un \u00ab 210,97 \u00bb redevient 0,97 gr\u00e2ce \u00e0 quantit\u00e9 \u00d7 prix)","Paiement en ESP\u00c8CES d\u00e9tect\u00e9 : l'appli ne propose pas de rattachement bancaire fant\u00f4me","Badge \u2713 Ticket v\u00e9rifi\u00e9 quand nombre d'articles ET somme concordent avec le ticket"],
+cons:["Ton ticket Super U de vacances : 18/18 articles, 67,02 \u20ac exacts, ventil\u00e9 en 9 rayons \u2014 colle-le dans l'appli pour l'enregistrer","Prochain \u00e9chantillon utile : un ticket de PLEIN (carburant) et un Intermarch\u00e9 physique"]},
+{v:22,date:'2026-07-19',origine:"Paul : l'\u00e9cole class\u00e9e \u00ab M\u00e9decin \u00bb, le reclassement qui ne prend pas, l'\u00e9pargne mensong\u00e8re, et solde de tous les chantiers",
+ch:["BUG R\u00c9PAR\u00c9 : une r\u00e8gle au motif trop court (\u00ab DR \u00bb) attrapait l'int\u00e9rieur de \u00ab SAINT ANDR \u00bb \u2014 l'\u00e9cole devenait un m\u00e9decin. Corrig\u00e9e automatiquement au chargement","La r\u00e8gle la plus SP\u00c9CIFIQUE gagne d\u00e9sormais : ton reclassement l'emporte sur une r\u00e8gle g\u00e9n\u00e9rique","\u00ab Cette op\u00e9ration seulement \u00bb : une case dans la fiche pour reclasser UN paiement sans cr\u00e9er de r\u00e8gle (le plein au supermarch\u00e9 sans toucher aux courses)","ARGENT R\u00c9SERV\u00c9 : r\u00e9serve des sommes par nom (Travaux du sinistre, Granul\u00e9s\u2026) \u2014 la trajectoire et les paliers se calculent sur l'\u00e9pargne VRAIMENT disponible","ALERTE DE D\u00c9COUVERT \u00c0 VENIR : l'appli conna\u00eet tes pr\u00e9l\u00e8vements r\u00e9currents et pr\u00e9vient AVANT que le solde plonge (\u00ab le Commun passera \u00e0 \u2212X \u20ac vers le 5 ao\u00fbt \u00bb)","SALAIRES : suivi par personne (mois de r\u00e9mun\u00e9ration, \u00e9cart vs moyenne 12 mois) \u2014 une prime ou une retenue saute aux yeux","Carburant : les stations Leclerc et U mal class\u00e9es sont corrig\u00e9es, les horodateurs quittent le carburant","Serveur : notification \u00e0 CHAQUE nouvelle version (auto-test permanent), point du samedi d\u00e9cal\u00e9 \u00e0 9 h, les notifications survivent 24 h si le t\u00e9l\u00e9phone dort"],
+cons:["Recolle code.gs dans Apps Script (nouvelle version fournie) \u2014 c'est lui qui porte la notification de version et le TTL","Cr\u00e9e ta premi\u00e8re r\u00e9serve : \u00ab Travaux du sinistre \u2014 22 959 \u20ac \u00bb (Comptes \u2192 Argent r\u00e9serv\u00e9)","Sur les deux t\u00e9l\u00e9phones : Param\u00e8tres \u2192 Chrome \u2192 autoriser l'activit\u00e9 en arri\u00e8re-plan (voir le \u24d8 Notifications)","Amazon toujours pas import\u00e9"]},
 {v:21,date:'2026-07-18',origine:"Reprendre le contr\u00f4le du ticket : le relev\u00e9 dit ce qu'on a pay\u00e9, le ticket dit ce qu'on a achet\u00e9",
 ch:["Nouveau : COLLER UN TICKET (onglet Comptes). Google Lens \u2192 S\u00e9lectionner du texte \u2192 Copier, puis un bouton","Le partage Android accepte d\u00e9sormais le TEXTE : partage direct depuis Lens si ton menu le propose","L'appli lit l'enseigne, la date, le total, les articles, et les ventile par rayon","Ticket de carburant reconnu \u00e0 part : litres et prix au litre extraits, avec contr\u00f4le de coh\u00e9rence","Rattachement propos\u00e9 \u00e0 l'op\u00e9ration bancaire correspondante (m\u00eame p\u00e9riode, montant proche)","Le texte brut est TOUJOURS conserv\u00e9 : si le d\u00e9codage est imparfait, il s'affine sans rien reperdre"],
 cons:["Capture deux ou trois tickets r\u00e9els (un plein, une course) et envoie-les \u00e0 Claude : le d\u00e9codage sera taill\u00e9 sur tes vrais tickets"]},
@@ -607,6 +621,10 @@ const R=[
 {p:/DRFIP|REMUNERATION/i,c:'rev',l:'Salaire'},{p:/CAF /i,c:'rev',l:'CAF'},{p:/CPAM/i,c:'rev',l:'Remb. CPAM'},{p:/GIE DE PREVOYA|VIR.*PREVOYANCE/i,c:'rev',l:'Remb. prévoyance'},{p:/REM OFFRE CONFORT|REMISE COTISATION/i,c:'rev',l:'Remise cotisation'},{p:/INTERETS/i,c:'rev',l:'Intérêts livret'},
 {p:/ECH PRET|ECHEANCE DE CREDIT/i,c:'fix',l:'Emprunt'},{p:/MACIF/i,c:'fix',l:'Ass. MACIF'},{p:/MAXANCE/i,c:'fix',l:'Ass. Maxance'},{p:/AXA/i,c:'fix',l:'Ass. AXA'},{p:/BPCE ASSUR/i,c:'fix',l:'Ass. BPCE'},{p:/CE BRETAGNE PAYS DE LOIRE/i,c:'fix',l:'Prêt conso'},{p:/CEBPL/i,c:'fix',l:'Ass. CEBPL'},{p:/ASSURANT/i,c:'fix',l:'Ass. Assurant'},{p:/BOUYGUES/i,c:'fix',l:'Bouygues'},{p:/SFR/i,c:'fix',l:'SFR'},{p:/ENGIE/i,c:'fix',l:'Engie'},{p:/SAUR/i,c:'fix',l:'SAUR'},{p:/DGFIP|DIRECTION GENERALE DES FINA/i,c:'fix',l:'Impôts'},{p:/URSSAF/i,c:'fix',l:'CESU'},{p:/ECOLE.*COLLEGE|COLLEGE.*SAINT|INSTITUTION ST ANDRE|ASSOCIATION ECOLE/i,c:'fix',l:'École'},{p:/COTISATION.*CONFORT|COTISATION.*FAMIL/i,c:'fix',l:'Cotis. banque'},{p:/LAFFITTE/i,c:'fix',l:'Téléphone'},{p:/GIEPS|PRLV.*GIEPS/i,c:'fix',l:'Prévoyance'},{p:/CHUBB/i,c:'fix',l:'Ass. Chubb'},{p:/2J SPORTS/i,c:'fix',l:'Salle sport'},{p:/DECATHLON.*LOCAT/i,c:'fix',l:'Vélo Decathlon'},{p:/FORF P\.STAT|FRAIS BANCAIRES|COM CB INT/i,c:'fix',l:'Frais bancaires'},
 {p:/AMAZON PRIME/i,c:'abo',l:'Amazon Prime'},{p:/AMAZON MUSIC/i,c:'abo',l:'Amazon Music'},{p:/AMAZON MEDIA EU/i,c:'abo',l:'Amazon Media'},{p:/AMZ DIGITAL/i,c:'abo',l:'Amazon Digital'},{p:/AMAZON EU SARL.*SUCCURSALE|PRLV AMAZON EU/i,c:'abo',l:'Amazon Kindle'},{p:/AUDIBLE/i,c:'abo',l:'Audible'},{p:/PEAGE/i,c:'peage',l:'P\u00e9ages'},
+{p:/RETRAIT D.ESPECES|RETRAIT DAB/i,c:'liquide',l:'Retrait d\u2019esp\u00e8ces \u2014 \u00e0 classer'},
+{p:/ELECLERC CARBURANTS|E\.LECLERC CARBU/i,c:'carburant',l:'Carburant (Leclerc)'},
+{p:/HYPER U STATIO|SUPER U STATIO/i,c:'carburant',l:'Carburant (station U)'},
+{p:/STATIONNT HORO|HORODATEUR|PAYBYPHONE|EFFIA|INDIGO PARK/i,c:'peage',l:'Stationnement'},
 {p:/\bRAL\b/i,c:'cantine',l:'Cantine (recharge \u00c9cole Directe)'},
 {p:/ANJOU BOIS ENERGIE|GRANULE|PELLET/i,c:'chauffage',l:'Granul\u00e9s (Anjou Bois \u00c9nergie)'},
 {p:/S\.?M\.?\s*AUTOS/i,c:'ess',l:'V\u00e9hicule (S.M. Autos)'},
@@ -699,7 +717,7 @@ return all}
 /* ================= DATA LAYER ================= */
 const FB_ON=!!FIREBASE_CONFIG.apiKey;
 const SK='budgetMeneyV2';
-let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{},devlogVus:{},notes:{},tutoVus:{},az:{},snapshots:{},reports:{},tickets:{}};
+let D={etat:null,tx:{},meta:{lastImp:{}},engagements:{},actions:null,config:null,actionsEtat:{},pp:{},scenarios:{},defi:null,defisHisto:{},fcmTokens:{},cheques:{},controles:{},importLog:{},notifLog:{},devlogVus:{},notes:{},tutoVus:{},az:{},snapshots:{},reports:{},tickets:{},overrides:{},reserves:{},ventilRetraits:{}};
 let fbdb=null;
 function localLoad(){const r=localStorage.getItem(SK);if(r){try{D=JSON.parse(r)}catch(e){}}if(!D.actions)D.actions=Object.assign({},ACTIONS_INIT)}
 function localSave(){localStorage.setItem(SK,JSON.stringify(D))}
@@ -717,7 +735,7 @@ firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();
 firebase.auth().onAuthStateChanged(u=>{
 if(!u){document.getElementById('ovlLogin').classList.add('show');return}
 document.getElementById('ovlLogin').classList.remove('show');
-fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{},tutoVus:v.tutoVus||{},az:v.az||{},snapshots:v.snapshots||{},reports:v.reports||{},tickets:v.tickets||{}};
+fbdb.ref('budget').on('value',snap=>{const v=snap.val()||{};D={etat:v.etat||null,tx:v.tx||{},meta:v.meta||{lastImp:{}},engagements:v.engagements||{},actions:v.actions||null,config:v.config||null,actionsEtat:v.actionsEtat||{},pp:v.pp||{},scenarios:v.scenarios||{},defi:v.defi||null,defisHisto:v.defisHisto||{},fcmTokens:v.fcmTokens||{},cheques:v.cheques||{},controles:v.controles||{},importLog:v.importLog||{},notifLog:v.notifLog||{},devlogVus:v.devlogVus||{},notes:v.notes||{},tutoVus:v.tutoVus||{},az:v.az||{},snapshots:v.snapshots||{},reports:v.reports||{},tickets:v.tickets||{},overrides:v.overrides||{},reserves:v.reserves||{},ventilRetraits:v.ventilRetraits||{}};
 if(!D.config){write('config',CFG_DEFAULTS);return}
 if(!D.actions){writeBatch('actions',Object.assign({},ACTIONS_INIT));return}
 CFG=fusionnerDefauts(D.config);applyCfg();refresh()})})}
@@ -741,8 +759,16 @@ let ALL=[];
 function computeAll(){ALL=marquerInternes(D);
 /* MOTEUR RUNTIME : labels, cat\u00e9gories et num\u00e9ros de ch\u00e8ques recalcul\u00e9s \u00e0 chaque chargement,
    depuis les libell\u00e9s bruts et les r\u00e8gles \u00e0 jour. R\u00e9troactif par construction. */
+/* Réparation ciblée de règles connues fautives (une seule fois, tracée au DEVLOG v22) :
+   le motif 'DR ' sans frontière de mot matchait l'intérieur de « SAINT ANDR » → tout
+   paiement à l'école devenait « Médecin ». */
+if(CFG&&CFG.reglesPerso)for(const k of Object.keys(CFG.reglesPerso)){const r=CFG.reglesPerso[k];
+if(r&&r.p==='DR BRUNO VEZIER|DR '){r.p='DR BRUNO VEZIER|\\bDR\\.?\\s';write('config/reglesPerso/'+k,r)}}
 const persos=[];
-if(CFG&&CFG.reglesPerso)for(const k of Object.keys(CFG.reglesPerso)){const r=CFG.reglesPerso[k];try{persos.push({re:new RegExp(r.p,'i'),c:r.c,l:r.l})}catch(e){}}
+if(CFG&&CFG.reglesPerso)for(const k of Object.keys(CFG.reglesPerso)){const r=CFG.reglesPerso[k];try{persos.push({re:new RegExp(r.p,'i'),c:r.c,l:r.l,spec:(r.p||'').length})}catch(e){}}
+/* LE PLUS SPÉCIFIQUE GAGNE : motif plus long = règle plus précise = prioritaire.
+   « OGEC SAINT ANDR » (15) bat « \bDR\.?\s » (9) — ton reclassement l'emporte enfin. */
+persos.sort((a,b)=>b.spec-a.spec);
 for(const t of ALL){
 if(t._int){t.l='Virement interne (neutralis\u00e9)';continue}
 const s=(t.lib||'')+' '+(t.full||'');
@@ -773,6 +799,12 @@ for(const t of ALL){if(t._int)continue;if(t.c==='rev'&&t.amt<0)t.c='fix';}
    (rentrée non salariale). Les vrais revenus ('rev') et les remboursements déjà 'remb' sont laissés. */
 for(const t of ALL){if(t._int)continue;
 if(t.amt>0&&t.c!=='rev'&&t.c!=='remb')t.c='remb';}
+/* OVERRIDES : reclassement d'UNE opération précise (sans règle). Choix humain explicite,
+   appliqué en tout dernier — il gagne sur tout. */
+const ov=D.overrides||{};
+for(const t of ALL){if(t._int)continue;
+const o=ov[(t._acc+'_'+t.k).replace(/[.#$\[\]/]/g,'_')];
+if(o){if(o.c)t.c=o.c;if(o.l)t.l=o.l}}
 marquerAnnulations()}
 function txReal(){return ALL.filter(t=>!t._int&&!t._annule)}
 /* ===== RÈGLE DE VÉRITÉ : le signe prime sur la catégorie =====
@@ -829,7 +861,7 @@ document.getElementById('accSel').addEventListener('click',e=>{const b=e.target.
 document.getElementById('impZ').addEventListener('click',()=>document.getElementById('csvInput').click());
 document.getElementById('csvInput').setAttribute('multiple','');
 /* Traitement d'un fichier (input OU partage Android) — retourne le rapport HTML détaillé */
-const FAMN={fix:'Fixes',courses:'Courses',carburant:'Carburant',peage:'P\u00e9ages',sante:'Sant\u00e9',trav:'Travaux',chauffage:'Chauffage',abo:'Abonnements',vac:'Vacances',ess:'V\u00e9hicule',cantine:'Cantine',ext:'Extras',rev:'Revenus',remb:'Remboursements'};
+const FAMN={fix:'Fixes',courses:'Courses',carburant:'Carburant',peage:'P\u00e9ages',sante:'Sant\u00e9',trav:'Travaux',chauffage:'Chauffage',abo:'Abonnements',vac:'Vacances',ess:'V\u00e9hicule',cantine:'Cantine',ext:'Extras',liquide:'Liquide (en poche)',rev:'Revenus',remb:'Remboursements'};
 function ligneTx(t){
 return`<div class="row"><div class="row-l" style="font-size:11px;line-height:1.35">${t.dd} \u00b7 <b>${t.l}</b>${t.chq?' n\u00b0'+t.chq:''}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${(t.lib||'').slice(0,34)}</span></div><div class="row-v ${t.amt<0?'rd':'g'}" style="font-size:11px">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div></div>`}
 async function traiterFichier(fname,buf){
@@ -1092,6 +1124,124 @@ else if(ratio<=1.25){box.className='proj bad';fill.style.background='#dc2626';
 msg.textContent=`Rouge : +${Math.round((ratio-1)*100)} % de trop. Chaque jour comme ça coûte ${fs(overJour)} d'épargne.`}
 else{box.className='proj crit';fill.style.background='#fff';
 msg.textContent=`STOP. Ce mois efface ${fs(proj-CIBLE)} d'épargne. C'est comme ça que le don et l'assurance ont disparu. Plus un achat non vital.`}}
+function reservesTotal(){return Object.values(D.reserves||{}).reduce((s,r)=>s+(+r.montant||0),0)}
+function epargneLibre(){const e=epargneActuelle();return e===null?null:e-reservesTotal()}
+/* ================= LIQUIDE : ventilation des retraits ================= */
+function estRetrait(t){return t.amt<0&&!t._int&&/RETRAIT D.ESPECES|RETRAIT DAB/i.test((t.lib||'')+' '+(t.full||''))}
+function retraitId(t){return (t._acc+'_'+t.k).replace(/[.#$\[\]/]/g,'_')}
+function partsDe(t){const v=(D.ventilRetraits||{})[retraitId(t)];return v&&v.parts?Object.entries(v.parts):[]}
+function reliquatRetrait(t){const s=partsDe(t).reduce((a,[k,p])=>a+(+p.m||0),0);return Math.round((Math.abs(t.amt)-s)*100)/100}
+function retraitsOuverts(){
+const un=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+return txReal().filter(t=>estRetrait(t)&&t.date>=un).map(t=>({t,rel:reliquatRetrait(t)}));}
+let retraitCourant=null;
+function ouvrirVentil(acc,k){
+const t=findOp(acc,k);if(!t)return;
+retraitCourant=t;
+const el=document.getElementById('ovlVentilBody');
+const rel=reliquatRetrait(t);
+const tksLibres=Object.entries(D.tickets||{}).filter(([id,tk])=>tk.especes&&!tk.retrait);
+el.innerHTML=
+'<div style="font-size:13px;font-weight:800;margin-bottom:2px">'+fm(Math.abs(t.amt))+' retir\u00e9s le '+t.date.split('-').reverse().join('/')+' ('+((COMPTES[t._acc]||{}).lbl||t._acc)+')</div>'
++'<div style="font-size:12px;font-weight:700;color:'+(rel>0?'#92400e':'#16a34a')+';margin-bottom:10px">'+(rel>0?fm(rel)+' encore \u00e0 classer (ou en poche)':'Tout est class\u00e9 \u2713')+'</div>'
++partsDe(t).map(([pk,p])=>'<div class="row"><div class="row-l" style="font-size:12px">'+String(p.l||'?').replace(/</g,'&lt;')+' <span style="color:var(--text-muted);font-weight:500">\u2192 '+(FAMN[p.c]||p.c)+'</span></div><div class="row-v" style="font-size:12px">'+fm(p.m)+' <span onclick="retirerPart(\''+pk+'\')" style="color:#dc2626;font-weight:800;cursor:pointer;margin-left:6px">\u2715</span></div></div>').join('')
++(rel>0?'<div style="background:var(--bg);border-radius:10px;padding:10px;margin-top:8px">'
++'<div class="fld"><label>Montant (\u20ac)</label><input id="vpM" inputmode="decimal" placeholder="'+rel.toFixed(2)+'"></div>'
++'<div class="fld"><label>Cat\u00e9gorie</label><select id="vpC">'+[['ext','Extras'],['courses','Courses'],['ess','V\u00e9hicule'],['carburant','Carburant'],['sante','Sant\u00e9'],['trav','Travaux'],['vac','Vacances'],['cantine','Cantine'],['fix','Charges fixes'],['peage','P\u00e9ages/Stationnement']].map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join('')+'</select></div>'
++'<div class="fld"><label>Pour quoi / pour qui (dicible)</label><input id="vpL" placeholder="Baby-sitter, march\u00e9, cadeau\u2026"></div>'
++'<button class="btn-engage" style="margin-top:4px" onclick="ajouterPart()">Classer cette part</button>'
++(tksLibres.length?'<div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-top:10px">Ou rattache un ticket esp\u00e8ces :</div>'+tksLibres.slice(0,4).map(([id,tk])=>'<div class="row" style="cursor:pointer" onclick="rattacherTicketRetrait(\''+id+'\')"><div class="row-l" style="font-size:11px">'+(tk.enseigne||'Ticket')+' \u00b7 '+(tk.date?tk.date.split('-').reverse().join('/'):'')+'</div><div class="row-v" style="font-size:11px">'+fm(tk.total||0)+'</div></div>').join(''):'')
++'</div>':'');
+document.getElementById('ovlVentil').classList.add('show')}
+function fermerVentil(){document.getElementById('ovlVentil').classList.remove('show');retraitCourant=null;refresh()}
+function ajouterPart(){
+if(!retraitCourant)return;
+const t=retraitCourant;
+const m=parseFloat((document.getElementById('vpM').value||'').replace(',','.'));
+const rel=reliquatRetrait(t);
+if(isNaN(m)||m<=0){alert('Montant invalide.');return}
+if(m>rel+0.005){alert('Cette part ('+fm(m)+') d\u00e9passe ce qui reste \u00e0 classer ('+fm(rel)+').');return}
+const c=document.getElementById('vpC').value;
+const l=(document.getElementById('vpL').value||'').trim()||'Esp\u00e8ces';
+write('ventilRetraits/'+retraitId(t)+'/parts/p'+Date.now(),{m:Math.round(m*100)/100,c,l:l.slice(0,40),ts:Date.now(),par:userEmail()});
+setTimeout(()=>ouvrirVentil(t._acc,t.k),300)}
+function retirerPart(pk){
+if(!retraitCourant)return;const t=retraitCourant;
+write('ventilRetraits/'+retraitId(t)+'/parts/'+pk,null);
+setTimeout(()=>ouvrirVentil(t._acc,t.k),300)}
+function rattacherTicketRetrait(tkId){
+if(!retraitCourant)return;const t=retraitCourant;
+const tk=(D.tickets||{})[tkId];if(!tk)return;
+const rel=reliquatRetrait(t);
+if((tk.total||0)>rel+0.005){alert('Le ticket ('+fm(tk.total)+') d\u00e9passe ce qui reste \u00e0 classer ('+fm(rel)+').');return}
+write('ventilRetraits/'+retraitId(t)+'/parts/p'+Date.now(),{m:tk.total,c:'courses',l:(tk.enseigne||'Ticket esp\u00e8ces').slice(0,40),tk:tkId,ts:Date.now(),par:userEmail()});
+write('tickets/'+tkId+'/retrait',retraitId(t));
+setTimeout(()=>ouvrirVentil(t._acc,t.k),300)}
+function updateLiquide(){
+const el=document.getElementById('liqBody');if(!el)return;
+const os=retraitsOuverts();
+const card=document.getElementById('liqCard');
+if(!os.length){card.style.display='none';return}
+card.style.display='block';
+const enPoche=os.reduce((s,o)=>s+o.rel,0);
+const aClasser=os.filter(o=>o.rel>0);
+el.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">'+fm(enPoche)+' de liquide non class\u00e9 sur 12 mois \u2014 dis \u00e0 l\'appli o\u00f9 il est parti (ou s\'il est encore en poche).</div>'
++os.sort((a,b)=>b.t.date.localeCompare(a.t.date)).slice(0,8).map(o=>'<div class="row" style="cursor:pointer" onclick="ouvrirVentil(\''+o.t._acc+'\',\''+o.t.k+'\')"><div class="row-l" style="font-size:12px">'+o.t.date.split('-').reverse().join('/')+' \u00b7 '+((COMPTES[o.t._acc]||{}).lbl||o.t._acc)+' \u00b7 '+fm(Math.abs(o.t.amt))+'</div><div class="row-v" style="font-size:12px;font-weight:800;color:'+(o.rel>0?'#92400e':'#16a34a')+'">'+(o.rel>0?fm(o.rel)+' \u00e0 classer':'\u2713')+'</div></div>').join('')}
+/* Éclatement des retraits ventilés : chaque part rejoint sa famille, le reliquat reste
+   « Liquide (en poche) ». La somme est conservée au centime par construction. */
+function eclater(liste){
+const out=[];
+for(const t of liste){
+if(!estRetrait(t)){out.push(t);continue}
+const parts=partsDe(t);
+if(!parts.length){out.push(t);continue}
+for(const[pk,p]of parts)out.push({_acc:t._acc,k:t.k+'_'+pk,date:t.date,amt:-Math.abs(+p.m||0),c:p.c||'ext',l:p.l||'Espèces',lib:t.lib,full:t.full,_virtuel:true,_src:t});
+const rel=reliquatRetrait(t);
+if(rel>0.005)out.push({_acc:t._acc,k:t.k+'_rel',date:t.date,amt:-rel,c:'liquide',l:'Liquide en poche (reste du retrait)',lib:t.lib,full:t.full,_virtuel:true,_src:t});}
+return out}
+function updateSalaires(){
+const el=document.getElementById('salBody');if(!el)return;
+const par={};
+for(const t of txReal()){
+if(t.amt<=0)continue;
+const m=((t.full||'')+' '+(t.lib||'')).match(/REMUNERATION DU (\d{2})\/(\d{4})/i);
+if(!m)continue;
+const mk=m[2]+'-'+m[1];
+(par[t._acc]=par[t._acc]||[]).push({mk,amt:t.amt,date:t.date})}
+if(!Object.keys(par).length){document.getElementById('salCard').style.display='none';return}
+document.getElementById('salCard').style.display='block';
+let h='';
+for(const[acc,ls]of Object.entries(par)){
+ls.sort((a,b)=>b.mk.localeCompare(a.mk));
+const der=ls[0];
+const douze=ls.slice(0,12);
+const moy=douze.reduce((s,x)=>s+x.amt,0)/douze.length;
+const ec=der.amt-moy;
+const lbl=(COMPTES[acc]||{}).lbl||acc;
+h+='<div class="row"><div class="row-l" style="font-size:12px"><b>'+lbl+'</b> <span style="color:var(--text-muted);font-weight:500">\u00b7 r\u00e9mun\u00e9ration '+der.mk.split('-').reverse().join('/')+'</span><br><span style="font-size:10px;color:var(--text-muted)">moyenne 12 mois : '+fm(moy)+'</span></div>'
++'<div class="row-v" style="font-size:12px">'+fm(der.amt)+'<br><span style="font-size:10px;font-weight:800;color:'+(ec>=0?'#16a34a':'#dc2626')+'">'+(ec>=0?'+':'')+fm(ec)+' vs moy.</span></div></div>'}
+el.innerHTML=h}
+function updateReserves(){
+const el=document.getElementById('resList');if(!el)return;
+const rs=Object.entries(D.reserves||{}).sort((a,b)=>b[1].montant-a[1].montant);
+const tot=reservesTotal();const ep=epargneActuelle();
+let h='';
+if(rs.length){
+h+=rs.map(([id,r])=>'<div class="row"><div class="row-l" style="font-size:12px">'+String(r.nom||'?').replace(/</g,'&lt;')+'</div><div class="row-v" style="font-size:12px">'+fm(r.montant)+' <span onclick="retirerReserve(\''+id+'\')" style="color:#dc2626;font-weight:800;cursor:pointer;margin-left:6px">\u2715</span></div></div>').join('');
+h+='<div class="row" style="border-top:1px solid var(--border)"><div class="row-l" style="font-size:12px;font-weight:800">Total r\u00e9serv\u00e9</div><div class="row-v" style="font-size:12px;font-weight:800">'+fm(tot)+'</div></div>';
+if(ep!==null)h+='<div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-top:6px">Vraiment disponible : <b>'+fm(ep-tot)+'</b> (sur '+fm(ep)+' au total)</div>';}
+else h+='<div style="font-size:12px;color:var(--text-muted);font-weight:600">Rien de r\u00e9serv\u00e9. Exemple : \u00ab Travaux du sinistre : 22 959 \u20ac \u00bb \u2014 l\'argent reste sur le compte, mais l\'appli cesse de le compter comme disponible.</div>';
+h+='<button onclick="ajouterReserve()" style="width:100%;margin-top:8px;padding:10px;border:1px dashed var(--border);background:transparent;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer">+ R\u00e9server une somme</button>';
+el.innerHTML=h}
+function ajouterReserve(){
+const nom=prompt('Pour quoi cet argent est-il r\u00e9serv\u00e9 ?\n(ex. Travaux du sinistre, Granul\u00e9s, No\u00ebl)');if(!nom)return;
+const m=parseFloat((prompt('Montant r\u00e9serv\u00e9 (\u20ac) :')||'').replace(',','.'));
+if(isNaN(m)||m<=0){alert('Montant invalide.');return}
+write('reserves/rv'+Date.now(),{nom:nom.trim().slice(0,40),montant:Math.round(m*100)/100,ts:Date.now(),par:userEmail()})}
+function retirerReserve(id){
+const r=(D.reserves||{})[id];if(!r)return;
+if(!confirm('Lib\u00e9rer la r\u00e9serve \u00ab '+r.nom+' \u00bb ('+fm(r.montant)+') ? L\'argent redeviendra disponible aux yeux de l\'appli.'))return;
+write('reserves/'+id,null)}
 function updateTraj(){
 const box=document.getElementById('trajBox');
 const main=document.getElementById('trajMain');
@@ -1099,33 +1249,33 @@ const zero=document.getElementById('trajZero');
 const jal=document.getElementById('trajJalons');
 const note=document.getElementById('trajNote');
 zero.innerHTML='';jal.innerHTML='';note.textContent='';
-const ep=epargneActuelle();let net=netMensuelMoyen();
+const epTot=epargneActuelle();const resT=reservesTotal();const ep=epTot===null?null:epTot-resT;let net=netMensuelMoyen();
 if(ep===null||net===null){box.className='traj';main.textContent='Saisis les soldes de départ et importe au moins un mois de CSV.';return}
 const gTraj=gainsEngages();net+=gTraj;
 if(net>=50){box.className='traj up';document.getElementById('trajLbl').textContent='Trajectoire d\u2019épargne — ça monte';
 const _rd=rythmeDetail();
-main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · tu mets de côté <span class="mono">+${fs(net)}/mois</span>`+(_rd&&_rd.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.75;margin-top:3px">= ${fs(_rd.recur+(gainsEngages()))} de vie courante − ${fs(_rd.prov)} de gros achats (moyenne 12 mois)</div>`:'');
+main.innerHTML=`Épargne disponible : <span class="mono">${fs(ep)}</span>${resT>0?` <span style="font-size:11px;font-weight:600;opacity:.7">(+ ${fs(resT)} réservés)</span>`:''} · tu mets de côté <span class="mono">+${fs(net)}/mois</span>`+(_rd&&_rd.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.75;margin-top:3px">= ${fs(_rd.recur+(gainsEngages()))} de vie courante − ${fs(_rd.prov)} de gros achats (moyenne 12 mois)</div>`:'');
 const targets=[];let t=Math.ceil(ep/10000)*10000;for(let i=0;i<3;i++){targets.push(t);t+=10000}
 jal.innerHTML=targets.map(tg=>{const months=(tg-ep)/net;const d=new Date();d.setMonth(d.getMonth()+Math.ceil(months));
 return`<div class="jalon"><span>${fs(tg)}</span><span class="jd">${d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span></div>`}).join('');
 note.textContent=net>=EPARGNE_CIBLE?`Objectif ${fs(EPARGNE_CIBLE)}/mois tenu. Les 25 000 € des travaux seront prêts bien avant l'heure.`:`Ça monte, mais sous l'objectif de ${fs(EPARGNE_CIBLE)}/mois. En tenant la cible, les paliers arrivent plus vite.`}
 else if(net<=-50){box.className='traj down';document.getElementById('trajLbl').textContent='Alerte — l\u2019épargne fond';
 const _rd2=rythmeDetail();
-main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`+(_rd2&&_rd2.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.8;margin-top:3px">= ${_rd2.recur>=0?'+':''}${fs(_rd2.recur+(gainsEngages()))} de vie courante − ${fs(_rd2.prov)} de gros achats (moyenne 12 mois)</div>`:'');
+main.innerHTML=`Épargne disponible : <span class="mono">${fs(ep)}</span>${resT>0?` <span style="font-size:11px;font-weight:600;opacity:.8">(+ ${fs(resT)} réservés)</span>`:''} · elle fond de <span class="mono">${fs(Math.abs(net))}/mois</span>.`+(_rd2&&_rd2.prov>10?`<div style="font-size:11px;font-weight:600;opacity:.8;margin-top:3px">= ${_rd2.recur>=0?'+':''}${fs(_rd2.recur+(gainsEngages()))} de vie courante − ${fs(_rd2.prov)} de gros achats (moyenne 12 mois)</div>`:'');
 const months=ep/Math.abs(net);const d=new Date();d.setMonth(d.getMonth()+Math.floor(months));
 zero.innerHTML=`<div class="traj-zero">Épargne à zéro : ${fdate(d)}</div>`;
 note.innerHTML=`\u00c0 cette date, il ne reste rien. Ni pour les travaux, ni pour un impr\u00e9vu. <b>La sortie existe : en tenant la cible de ${fs(CIBLE)}, le rythme devient +${fs(EPARGNE_CIBLE)}/mois et cette date dispara\u00eet.</b>`}
-else{box.className='traj';main.innerHTML=`Épargne : <span class="mono">${fs(ep)}</span> · ça stagne (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès. À ce rythme, les paliers n'arrivent jamais.`}}
+else{box.className='traj';main.innerHTML=`Épargne disponible : <span class="mono">${fs(ep)}</span>${resT>0?` <span style="font-size:11px;font-weight:600;opacity:.7">(+ ${fs(resT)} réservés)</span>`:''} · ça stagne (${net>=0?'+':''}${fs(net)}/mois). Ni chute, ni progrès. À ce rythme, les paliers n'arrivent jamais.`}}
 let envOuverte=null;
 function togEnv(c){envOuverte=envOuverte===c?null:c;updateEnv()}
 function moyenneCat(c){
 const ms=fullMonthsBack(12);if(!ms.length)return 0;
-let s=0;for(const mk of ms)s+=depOf(txMonth(mk).filter(t=>t.c===c));
+let s=0;for(const mk of ms)s+=depOf(eclater(txMonth(mk)).filter(t=>t.c===c));
 return Math.round(s/ms.length);}
 function reserveCumul(c){
 if(c!=='sante'&&c!=='trav')return null;
 const ms=fullMonthsBack(12);if(!ms.length)return null;
-let r=0;for(const mk of ms)r+=budEff(c,mk)-depOf(txMonth(mk).filter(t=>t.c===c));
+let r=0;for(const mk of ms)r+=budEff(c,mk)-depOf(eclater(txMonth(mk)).filter(t=>t.c===c));
 return Math.round(r)}
 function moisPrec(mk){const[y,m]=mk.split('-').map(Number);return m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0')}
 function reportDe(c,mk){return ((D.reports||{})[c]||{})[mk]||0}
@@ -1133,7 +1283,7 @@ function budEff(c,mk){return (ENV[c]||0)+reportDe(c,mk)}
 function reliquatPrec(c,mk){
 const p=moisPrec(mk);
 const bud=budEff(c,p);
-const sp=depOf(txMonth(p).filter(t=>t.c===c&&t.amt<0));
+const sp=depOf(eclater(txMonth(p)).filter(t=>t.c===c&&t.amt<0));
 return Math.round(bud-sp);}
 function reporterEnv(c,ev){
 if(ev&&ev.stopPropagation)ev.stopPropagation();
@@ -1146,7 +1296,7 @@ if(ev&&ev.stopPropagation)ev.stopPropagation();
 if(!confirm('Annuler le report sur '+(FAMN[c]||c)+' ?'))return;
 write('reports/'+c+'/'+curMonth(),null);}
 function updateEnv(){
-const mtx=txMonth(curMonth());
+const mtx=eclater(txMonth(curMonth()));
 const mk=curMonth();
 const defs=[['courses','Courses'],['carburant','Carburant'],['cantine','Cantine'],['chauffage','Chauffage'],['sante','Santé'],['trav','Travaux'],['abo','Abonnements'],['vac','Vacances'],['peage','Péages'],['ess','Véhicule'],['ext','Extras']].filter(x=>ENV[x[0]]!==undefined).map(([c,lbl])=>[c,lbl,budEff(c,mk)]);
 document.getElementById('envList').innerHTML=defs.map(([c,lbl,bud])=>{
@@ -1173,7 +1323,7 @@ const revs={};mtx.filter(t=>t.amt>0).forEach(t=>{if(!revs[t.l])revs[t.l]={s:0,tx
 document.getElementById('revList').innerHTML=Object.entries(revs).sort((a,b)=>b[1].s-a[1].s).map(([l,v])=>
 `<div class="row" style="cursor:pointer" onclick="togRev('${l.replace(/'/g,"\\'")}')"><div class="row-l">${revOuvert===l?'\u25be':'\u25b8'} ${l}</div><div class="row-v g">+${fm(v.s)}</div></div>`
 +(revOuvert===l?'<div style="padding-left:10px;border-left:2px solid var(--border);margin:2px 0 6px">'+v.txs.map(t=>ligneOp(t,{small:true,cpt:true})).join('')+'</div>':'')).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun revenu importé ce mois-ci.</div>';
-const deps={};mtx.filter(estDepense).forEach(t=>{const g=famDepense(t);if(!deps[g])deps[g]={s:0,txs:[]};deps[g].s+=Math.abs(t.amt);deps[g].txs.push(t)});
+const deps={};eclater(mtx.filter(estDepense)).forEach(t=>{const g=famDepense(t);if(!deps[g])deps[g]={s:0,txs:[]};deps[g].s+=Math.abs(t.amt);deps[g].txs.push(t)});
 const tot=Object.values(deps).reduce((s,v)=>s+v.s,0);
 document.getElementById('depList').innerHTML=Object.entries(deps).sort((a,b)=>b[1].s-a[1].s).map(([l,v])=>
 `<div class="row" style="cursor:pointer" onclick="togFam('${l}')"><div class="row-l">${famOuverte===l?'\u25be':'\u25b8'} ${l} <span style="font-weight:500;color:var(--text-muted)">\u00d7${v.txs.length}</span></div><div class="row-v rd">\u2212${fm(v.s)}</div></div>`
@@ -1477,6 +1627,47 @@ function verifierSolde(acc){
 const reel=parseFloat(prompt('Solde EXACT du compte '+((COMPTES[acc]||{}).lbl||acc)+' affich\u00e9 par la banque, maintenant :'));
 if(isNaN(reel))return;
 write('controles/'+acc,{reel,dateIso:new Date().toISOString().slice(0,10),ts:Date.now()})}
+/* Prélèvements récurrents d'un compte : même libellé ≥3 fois, jour du mois stable (écart ≤4),
+   montant stable (écart ≤20 %). Salaires : crédits DRFIP, jour ~26. */
+function recurrentsDe(acc){
+const six=new Date(Date.now()-190*864e5).toISOString().slice(0,10);
+const par={};
+for(const t of txReal()){
+if(t._acc!==acc||t.date<six)continue;
+/* cl\u00e9 = libell\u00e9 + ordre de grandeur : deux cr\u00e9dits sous le m\u00eame libell\u00e9
+   (942 \u20ac et 68 \u20ac, tous deux le 5) restent deux r\u00e9currents distincts */
+const cle=(t.lib||'').slice(0,22)+'\u00a7'+Math.round(Math.log10(Math.abs(t.amt)+1)*3);
+(par[cle]=par[cle]||[]).push(t)}
+const out=[];
+for(const[cle,ts]of Object.entries(par)){
+if(ts.length<3)continue;
+const jours=ts.map(t=>+t.date.slice(8,10));
+const jMed=jours.sort((a,b)=>a-b)[Math.floor(jours.length/2)];
+if(jours.some(j=>Math.abs(j-jMed)>4&&Math.abs(j-jMed)<26))continue;
+const ms=ts.map(t=>t.amt);
+const mMed=ms.sort((a,b)=>a-b)[Math.floor(ms.length/2)];
+if(ms.some(m=>Math.abs(m-mMed)>Math.abs(mMed)*0.2+5))continue;
+/* déjà passé ce mois-ci ? */
+const mk=curMonth();
+const dejaCeMois=ts.some(t=>t.date.startsWith(mk));
+out.push({lib:cle.split('\u00a7')[0],jour:jMed,montant:mMed,deja:dejaCeMois})}
+return out}
+function projeterSolde(acc){
+const s0=(D.etat&&D.etat.soldes||{})[acc];if(s0===undefined)return null;
+const rec=recurrentsDe(acc);if(!rec.length)return null;
+const now=new Date();const jNow=now.getDate();
+const evts=[];
+for(const r of rec){
+for(const dm of[0,1]){ /* ce mois-ci (reste) et le mois prochain */
+const d=new Date(now.getFullYear(),now.getMonth()+dm,Math.min(r.jour,28));
+if(d<=now)continue;
+if(dm===0&&r.deja)continue;
+if((d-now)/864e5>31)continue;
+evts.push({d,m:r.montant,lib:r.lib})}}
+evts.sort((a,b)=>a.d-b.d);
+let s=s0,min=s0,minD=null,minEvt=null;
+for(const e of evts){s+=e.m;if(s<min){min=s;minD=e.d;minEvt=e.lib}}
+return{min:Math.round(min),date:minD,evt:minEvt,solde:s0}}
 function detecterAnomalies(){
 const an=[];
 /* 1. Mouvements familiaux non appari\u00e9s (devraient \u00eatre des virements internes) */
@@ -1486,13 +1677,19 @@ if(suspects.length)an.push({grave:true,txt:suspects.length+' mouvement(s) au nom
 for(const[id,c]of comptesTries()){const ev=ecartVivant(id);
 if(ev&&Math.abs(ev.ecart)>=50)an.push({grave:true,txt:'\u00c9cart de '+fm(ev.ecart)+' sur '+c.lbl+' (contr\u00f4le du '+ev.dateIso.split('-').reverse().join('/')+') \u2014 des op\u00e9rations manquent sur cette p\u00e9riode'})}
 /* 3. (ancien bloc zones grises — supprimé en v20) */
+/* Solde prévisionnel : un compte courant qui va plonger sous zéro dans les 30 jours */
+for(const[id,c]of comptesTries()){
+if(c.type!=='courant')continue;
+const p=projeterSolde(id);
+if(p&&p.min<0&&p.date){
+an.push({grave:p.solde>=0,txt:c.lbl+' : le solde va passer \u00e0 '+fs(p.min)+' vers le '+p.date.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+(p.evt?' ('+p.evt.trim()+')':'')+' \u2014 \u00e0 alimenter avant.'})}}
 /* Coh\u00e9rence du calibrage : la somme des enveloppes + les fixes de r\u00e9f\u00e9rence
    doit \u00e9galer la cible, sinon on peut tenir chaque enveloppe et rater la cible. */
 {const somme=Object.values(ENV||{}).reduce((s,v)=>s+(+v||0),0);
 const total=somme+(+CFG.fixesRef||0);
 const ecart=total-(+CFG.cible||0);
 if(Math.abs(ecart)>=10)an.push({grave:false,txt:'Calibrage : enveloppes ('+fs(somme)+') + fixes ('+fs(+CFG.fixesRef||0)+') = '+fs(total)+', pour une cible de '+fs(+CFG.cible||0)+' \u2014 \u00e9cart de '+(ecart>0?'+':'')+fs(ecart)+'. Tant qu\'il existe, tenir toutes les enveloppes ne garantit pas de tenir la cible.'});
-const sansEnv=['vac','peage','ess','sante','trav','courses','carburant','abo','ext','cantine','chauffage'].filter(c=>ENV[c]===undefined);
+const sansEnv=['vac','peage','ess','sante','trav','courses','carburant','abo','ext','cantine','chauffage'].filter(c=>ENV[c]===undefined); /* 'liquide' volontairement hors contr\u00f4le : c'est un sas, pas un poste */
 if(sansEnv.length)an.push({grave:false,txt:'Cat\u00e9gories sans enveloppe : '+sansEnv.map(c=>FAMN[c]||c).join(', ')+' \u2014 ces d\u00e9penses comptent dans le total mais ne sont surveill\u00e9es nulle part.'});}
 /* Pas de d\u00e9tection de trous par \u00e9cart d'op\u00e9rations : une p\u00e9riode sans achat n'est pas une anomalie.
    La v\u00e9rit\u00e9 de couverture, c'est la date du dernier CSV import\u00e9 (meta/lastImp) + le blocage \u26d4 >7j. */
@@ -1567,7 +1764,75 @@ return Object.entries(cmd).map(([num,v])=>({k:'az'+num.replace(/[^0-9]/g,'').sli
 /* Extracteur GÉNÉRIQUE : il ne devine rien, il repère ce qui est certain
    (montants en fin de ligne, total, date, volume de carburant) et laisse
    le reste au texte brut, conservé tel quel pour affiner plus tard. */
+/* Parseur SUPER U / HYPER U : Lens éclate chaque article en fragments (nom / total+code TVA /
+   quantité / prix unitaire) dans un ordre variable. On recolle par machine à états, on répare
+   par le contrôle quantité × prix, et on valide par les compteurs imprimés sur le ticket. */
+const RAYONS_U=/^(BOULANGERIE|PATISSERIE|VIENNOISERIE|BISCUITS|CHOCOLATS|CONFISERIE|EPICERIE|CONDIMENTS|CONSERVES|PATES|RIZ|CEREALES|PETIT DEJ|CAFES?|THES?|JUS|NECTARS|SIROPS|EAUX|SODAS|LIQUIDES|BIERES|VINS|APERITIFS|ALCOOLS|CREMERIE|FROMAGES?|YAOURTS|LAITS?|SURGELES?|SURGELE|GLACES|FRUITS|LEGUMES|VIANDES?|BOUCHERIE|VOLAILLES?|CHARCUTERIE|POISSONNERIE|TRAITEUR|HYGIENE|PARFUMERIE|BEAUTE|ENTRETIEN|DROGUERIE|BAZAR|PAPETERIE|TEXTILE|ANIMALERIE|PRODUITS ETRANGERS|DIETETIQUE|BEBE|PUERICULTURE)/i;
+function parseTicketU(txt){
+const T={brut:String(txt||''),type:'courses',enseigne:null,date:null,total:null,lignes:[],especes:false,nbAnnonce:null,fiable:false};
+const raw=String(txt||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+const up=s=>s.toUpperCase();
+for(const l of raw.slice(0,8)){if(/SUPER ?U|HYPER ?U|U EXPRESS/i.test(l)){T.enseigne=l.slice(0,32);break}}
+for(const l of raw){const m=l.match(/(\d{2})[\/.-](\d{2})[\/.-](\d{2,4})/);if(m){let a=m[3];if(a.length===2)a='20'+a;T.date=a+'-'+m[2]+'-'+m[1];break}}
+T.especes=/ESPECES/i.test(txt);
+const nA=txt.match(/Nombre de lignes d.article\s*(\d+)/i);if(nA)T.nbAnnonce=+nA[1];
+/* zone articles : après VENTE si présent, avant Nombre de lignes / TOTAL final */
+let deb=raw.findIndex(l=>/VENTE/i.test(l));if(deb<0)deb=4;
+let finZone=raw.findIndex(l=>/^TOTAL\b|^SOUS.?TOTAL/i.test(l));if(finZone<0)finZone=raw.length;
+let fin=finZone;
+const POUBELLE=/^(TOTAL|SOUS.?TOTAL|ESPECES|RENDU|TVA\b|HT\b|CB\b|CARTE|MERCI|FRANCE|TEL|SIRET|TICKET|CAISSE|Dont |Nombre de lignes)/i;
+let cur=null,rayon='Divers';
+const orphNoms=[],orphMts=[];
+const flush=()=>{if(!cur)return;
+let t=cur.t;
+if(cur.q&&cur.pu){const c=Math.round(cur.q*cur.pu*100)/100;
+if(t===null||Math.abs(c-t)>0.02)t=c;} /* répare les totaux OCR aberrants (« 210,97 ») */
+if(t!==null&&t>0&&t<3000)T.lignes.push({nom:cur.nom.slice(0,48),prix:t,rayon:cur.rayon==='Divers'?rayonDe(cur.nom):cur.rayon});
+else if(t===null)orphNoms.push({nom:cur.nom.slice(0,48),rayon:cur.rayon});
+cur=null};
+for(let i=deb+1;i<fin;i++){
+const l=raw[i];
+if(POUBELLE.test(l))continue;
+const mTot=l.match(/^(\d{1,4}[.,]\d{2})\s*€(?:\s*(\d{2}))?\s*$/);
+const mQte=l.match(/^(\d{1,2})\s*x\s*$/i);
+const mQPu=l.match(/^(\d{1,2})\s*x\s*(\d{1,4}[.,]\d{2})\s*(?:EUR|€)?\s*$/i);
+const mPu=l.match(/^(\d{1,4}[.,]\d{2})\s*EUR\s*$/i);
+const mNomTot=l.match(/^(.{4,}?)\s+(\d{1,4}[.,]\d{2})\s*€\s*(\d{2})?\s*$/);
+const p=s=>parseFloat(s.replace(',','.'));
+if(mTot){if(cur&&cur.t===null&&!(cur.q&&cur.pu))cur.t=p(mTot[1]);else if(mTot[2])orphMts.push(p(mTot[1]));continue}
+if(mQPu){if(cur){cur.q=+mQPu[1];cur.pu=p(mQPu[2])}else orphMts.push(Math.round(+mQPu[1]*p(mQPu[2])*100)/100);continue}
+if(mQte){if(cur)cur.q=+mQte[1];continue}
+if(mPu){if(cur&&cur.q&&!cur.pu)cur.pu=p(mPu[1]);else if(cur&&cur.t===null&&!cur.q)cur.t=p(mPu[1]);else orphMts.push(p(mPu[1]));continue}
+/* ligne texte */
+if(RAYONS_U.test(l)&&!/\d/.test(l)&&l===up(l)){flush();rayon=l.slice(0,28);continue}
+if(/[A-Za-z]{3}/.test(l)&&!/^\d+$/.test(l)){
+if(mNomTot&&!RAYONS_U.test(l)){flush();cur={nom:mNomTot[1],t:p(mNomTot[2]),q:null,pu:null,rayon};continue}
+flush();cur={nom:l,t:null,q:null,pu:null,rayon}}}
+flush();
+let som=Math.round(T.lignes.reduce((s,x)=>s+x.prix,0)*100)/100;
+const pied=raw.slice(Math.max(finZone,0)).join(' ');
+const cands=[...pied.matchAll(/(\d{1,4}[.,]\d{2})/g)].map(m=>parseFloat(m[1].replace(',','.')));
+/* 2e PASSE — l'équation du ticket : Lens éloigne parfois montants et noms. Si des noms sont
+   rest\u00e9s sans prix, on cherche parmi les montants orphelins le sous-ensemble qui boucle
+   EXACTEMENT la somme sur un total du pied. Le ticket se v\u00e9rifie lui-m\u00eame. */
+if(orphNoms.length&&orphMts.length){
+const need=orphNoms.length;
+let sol=null;
+const cible=cands.find(c=>{ /* pour chaque total candidat, existe-t-il une solution ? */
+const d=Math.round((c-som)*100);if(d<=0)return false;
+const n=orphMts.length;const vals=orphMts.map(v=>Math.round(v*100));
+const dfs=(i,k,r,pris)=>{if(k===0)return r===0?pris.slice():null;
+if(i>=n||r<=0)return null;
+const a=dfs(i+1,k-1,r-vals[i],[...pris,i]);if(a)return a;
+return dfs(i+1,k,r,pris)};
+const s=dfs(0,need,d,[]);if(s){sol=s;return true}return false});
+if(sol){for(let j=0;j<need;j++)T.lignes.push({nom:orphNoms[j].nom,prix:orphMts[sol[j]],rayon:orphNoms[j].rayon});
+som=Math.round(T.lignes.reduce((s,x)=>s+x.prix,0)*100)/100;}}
+T.total=cands.find(c=>Math.abs(c-som)<=0.05)||som;
+T.fiable=(T.nbAnnonce===null||T.nbAnnonce===T.lignes.length)&&Math.abs(som-T.total)<=0.05;
+return T}
 function parseTicket(txt){
+if(/SUPER ?U|HYPER ?U|U EXPRESS/i.test(String(txt||'').slice(0,400)))return parseTicketU(txt);
 const lignes=String(txt||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
 const T={brut:String(txt||''),type:'courses',date:null,total:null,lignes:[],enseigne:null,litres:null,prixL:null};
 const num=s=>{const m=String(s).replace(/\s/g,'').match(/(\d+)[.,](\d{2})\b/);return m?parseFloat(m[1]+'.'+m[2]):null};
@@ -1624,7 +1889,7 @@ ouvrirTicket(txt)}
 function ouvrirTicket(txt){
 ticketEnCours=parseTicket(txt);
 const T=ticketEnCours;
-const cands=candidatsOp(T);
+const cands=T.especes?[]:candidatsOp(T);
 const el=document.getElementById('ovlTicketBody');
 el.innerHTML=
 '<div class="fld"><label>Type</label><select id="tkType" onchange="majTicketType()">'
@@ -1633,8 +1898,10 @@ el.innerHTML=
 +(T.enseigne?'<div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">'+T.enseigne+(T.date?' \u00b7 '+T.date.split('-').reverse().join('/'):'')+'</div>':'')
 +'<div class="fld"><label>Total lu sur le ticket</label><input id="tkTotal" inputmode="decimal" value="'+(T.total!==null?T.total.toFixed(2):'')+'"></div>'
 +(T.type==='carburant'?'<div class="fld"><label>Litres</label><input id="tkLitres" inputmode="decimal" value="'+(T.litres||'')+'"></div><div class="fld"><label>Prix au litre</label><input id="tkPrixL" inputmode="decimal" value="'+(T.prixL||'')+'"></div>':'')
++(T.especes?'<div style="font-size:11px;font-weight:700;color:#92400e;background:var(--bg);border-radius:8px;padding:8px;margin-bottom:10px">Pay\u00e9 en ESP\u00c8CES : pas d\'op\u00e9ration bancaire \u00e0 rattacher \u2014 le liquide vit hors des relev\u00e9s (retrait, vente, cadeau\u2026 l\'appli ne pr\u00e9sume pas d\'o\u00f9 il vient).</div>':'')
++(T.fiable?'<div style="font-size:11px;font-weight:800;color:#16a34a;margin-bottom:8px">\u2713 Ticket v\u00e9rifi\u00e9 : '+T.lignes.length+' article(s)'+(T.nbAnnonce?' / '+T.nbAnnonce+' annonc\u00e9s':'')+', somme = total ('+fm(T.total)+')</div>':(T.lignes&&T.lignes.length?'<div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px">Lecture partielle \u2014 v\u00e9rifie le total ci-dessous, le texte brut est conserv\u00e9.</div>':''))
 +'<div class="fld"><label>Rattacher \u00e0 une op\u00e9ration bancaire</label><select id="tkOp">'
-+'<option value="">\u2014 aucune pour l\'instant \u2014</option>'
++'<option value="">\u2014 '+(T.especes?'aucune (esp\u00e8ces)':'aucune pour l\'instant')+' \u2014</option>'
 +cands.map(c=>'<option value="'+c.id+'">'+c.date.split('-').reverse().join('/')+' \u00b7 '+fm(Math.abs(c.amt))+' \u00b7 '+(c.lib||'').slice(0,22)+(c.ecart?' (\u00e9cart '+c.ecart+')':'')+'</option>').join('')
 +'</select></div>'
 +(T.lignes.length?'<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 4px">'+T.lignes.length+' ligne(s) lue(s) \u2014 ventilation :</div>'+ventilHtml(T):'<div style="font-size:11px;font-weight:600;color:#92400e;margin:8px 0">Aucune ligne d\'article reconnue. Le texte brut sera conserv\u00e9 tel quel : envoie-le \u00e0 Claude pour affiner le d\u00e9codage.</div>')
@@ -1642,7 +1909,7 @@ el.innerHTML=
 document.getElementById('ovlTicket').classList.add('show')}
 function ventilHtml(T){
 const par={};
-for(const l of T.lignes){const r=rayonDe(l.nom);par[r]=(par[r]||0)+l.prix}
+for(const l of T.lignes){const r=l.rayon||rayonDe(l.nom);par[r]=(par[r]||0)+l.prix}
 const tot=Object.values(par).reduce((s,v)=>s+v,0)||1;
 return Object.entries(par).sort((a,b)=>b[1]-a[1]).map(([r,v])=>
 '<div class="row"><div class="row-l" style="font-size:12px">'+r+'</div><div class="row-v" style="font-size:12px">'+fm(v)+' <span style="color:var(--text-muted);font-weight:600">('+Math.round(100*v/tot)+'%)</span></div></div>').join('')}
@@ -1672,7 +1939,7 @@ const op=document.getElementById('tkOp').value||null;
 const id='t'+Date.now();
 const rec={ts:Date.now(),par:userEmail(),type:T.type,date:T.date,enseigne:T.enseigne,total:T.total,
 litres:T.litres,prixL:T.prixL,op:op,brut:T.brut.slice(0,20000),
-lignes:T.lignes.map(l=>({n:l.nom,p:l.prix,r:rayonDe(l.nom)}))};
+lignes:T.lignes.map(l=>({n:l.nom,p:l.prix,r:l.rayon||rayonDe(l.nom)})),especes:!!T.especes,fiable:!!T.fiable};
 write('tickets/'+id,rec);
 fermerTicket();
 alert('Ticket enregistr\u00e9'+(op?' et rattach\u00e9 \u00e0 l\'op\u00e9ration.':'. Tu pourras le rattacher plus tard.'));}
@@ -1720,7 +1987,7 @@ if(s.config)write('config',s.config);
 if(s.cheques)write('cheques',s.cheques);
 alert('Etat restaure.');}
 function exportJson(){
-const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,devlogVus:D.devlogVus,notes:D.notes,tutoVus:D.tutoVus,az:D.az,reports:D.reports,tickets:D.tickets,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
+const dump={exportDate:new Date().toISOString(),app:'budget-meney',appVersion:APP_VERSION,user:userEmail(),config:CFG,etat:D.etat,meta:D.meta,engagements:D.engagements,actions:D.actions,actionsEtat:D.actionsEtat,scenarios:D.scenarios,defi:D.defi,defisHisto:D.defisHisto,cheques:D.cheques,controles:D.controles,importLog:D.importLog,notifLog:D.notifLog,devlogVus:D.devlogVus,notes:D.notes,tutoVus:D.tutoVus,az:D.az,reports:D.reports,tickets:D.tickets,overrides:D.overrides,reserves:D.reserves,ventilRetraits:D.ventilRetraits,fcmTokens:Object.fromEntries(Object.entries(D.fcmTokens||{}).map(([k,v])=>[k,{email:v.email,ua:v.ua,ts:v.ts}])),pp:D.pp,tx:D.tx};
 const blob=new Blob([JSON.stringify(dump,null,1)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);
 a.download='budget-export-'+new Date().toISOString().slice(0,10)+'.json';
@@ -2078,6 +2345,10 @@ const h=libHumain(t);const o=opts||{};
 return`<div class="row" style="cursor:pointer" onclick="openOp('${t._acc}','${t.k}')"><div class="row-l" style="font-size:${o.small?'11px':'12px'};line-height:1.35">${t.dd||t.date} \u00b7 <b>${h.nom}</b>${o.cpt?' <span style="font-weight:500;color:var(--text-muted)">\u00b7 '+((COMPTES[t._acc]||{}).lbl||'')+'</span>':''}<br><span style="font-weight:500;color:var(--text-muted);font-size:10px">${h.sous}</span></div><div class="row-v ${t.amt<0?'rd':'g'}" style="font-size:${o.small?'11px':'12px'}">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div></div>`}
 function findOp(acc,k){return(D.tx[acc]||{})[k]}
 function openOp(acc,k){
+if(String(k).includes('_p')||String(k).endsWith('_rel')){
+const base=String(k).replace(/_(p\d+|rel)$/,'');
+const t0=findOp(acc,base);
+if(t0&&estRetrait(t0)){ouvrirVentil(acc,base);return}}
 const t=findOp(acc,k);if(!t)return;t._acc=acc;
 const h=libHumain(t);
 const note=(D.notes||{})[acc+'_'+k]||'';
@@ -2086,7 +2357,8 @@ document.getElementById('opCorps').innerHTML=`
 <div style="font-size:22px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${t.amt<0?'var(--red)':'var(--green)'};margin-bottom:8px">${t.amt<0?'\u2212':'+'}${fm(Math.abs(t.amt))}</div>
 <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:10px">${new Date(t.date).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} \u00b7 compte ${(COMPTES[acc]||{}).lbl||acc}</div>
 <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);background:var(--bg);border-radius:8px;padding:8px;margin-bottom:12px;word-break:break-all">${t.lib||''}${t.full?' \u2014 '+t.full:''}</div>
-${detailVentile(t)}<div class="fld"><label>Nom dicible (cr\u00e9e une r\u00e8gle pour toutes les op\u00e9rations semblables)</label><input type="text" id="opNom" value="${t.l==='Non class\u00e9'?'':(t.l||'').replace(/"/g,'&quot;')}" placeholder="${h.nom.replace(/"/g,'&quot;')}"></div>
+${detailVentile(t)}<div class="fld"><label>Nom dicible</label><input type="text" id="opNom" value="${t.l==='Non class\u00e9'?'':(t.l||'').replace(/"/g,'&quot;')}" placeholder="${h.nom.replace(/"/g,'&quot;')}"></div>
+<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text-dim);margin:-4px 0 10px;cursor:pointer"><input type="checkbox" id="opSeule" style="width:16px;height:16px;accent-color:var(--accent)">Cette op\u00e9ration seulement (sinon : r\u00e8gle pour toutes les semblables)</label>
 <div class="fld"><label>Cat\u00e9gorie</label><select class="inp" id="opCat">${[['courses','Courses'],['carburant','Carburant'],['peage','P\u00e9ages'],['sante','Sant\u00e9'],['trav','Travaux'],['abo','Abonnements'],['cantine','Cantine'],['ess','V\u00e9hicule'],['ext','Extras'],['fix','Charges fixes'],['vac','Vacances'],['remb','Remboursement']].map(([v,l])=>`<option value="${v}"${t.c===v?' selected':''}>${l}</option>`).join('')}</select></div>
 <div class="fld"><label>Note (uniquement cette op\u00e9ration)</label><input type="text" id="opNote" value="${String(note).replace(/"/g,'&quot;')}" placeholder="ex. rembours\u00e9 par Bruno"></div>
 <button class="btn-engage" onclick="saveOp('${acc}','${k}')">Enregistrer</button>`;
@@ -2115,11 +2387,14 @@ const nom=document.getElementById('opNom').value.trim();
 const cat=document.getElementById('opCat').value;
 const note=document.getElementById('opNote').value.trim();
 if(nom||cat!==t.c){
+if(document.getElementById('opSeule')&&document.getElementById('opSeule').checked){
+write('overrides/'+(acc+'_'+k).replace(/[.#$\[\]/]/g,'_'),{c:cat,l:nom||libHumain(t).nom,ts:Date.now(),par:userEmail()});}
+else{
 const p=motifRegle(t);
 if(p.length>=3){
 let cle='r'+Date.now();
-for(const[k,r]of Object.entries(CFG.reglesPerso||{}))if(r.p===p){cle=k;break}
-write('config/reglesPerso/'+cle,{p,c:cat,l:nom||libHumain(t).nom})}}
+for(const[kk,r]of Object.entries(CFG.reglesPerso||{}))if(r.p===p){cle=kk;break}
+write('config/reglesPerso/'+cle,{p,c:cat,l:nom||libHumain(t).nom})}}}
 if(note)write('notes/'+acc+'_'+k,note);
 else if((D.notes||{})[acc+'_'+k])write('notes/'+acc+'_'+k,null);
 document.getElementById('ovlOp').classList.remove('show')}
@@ -2136,7 +2411,7 @@ lastimp:"<b>Dernier import.</b> Le délai de chaque compte, un par un. L'appli n
 impzone:"<b>Import CSV.</b> Trois chemins. 1 — Le plus simple : depuis l'appli bancaire, exporte le CSV (elle propose d'office « depuis le dernier export ») puis Partager → Budget : l'import se fait tout seul. 2 — Cette zone : fichiers téléchargés, plusieurs à la fois. 3 — Les analyses : le CSV PayPal (relevé d'activité) et le CSV Amazon (historique de commandes) s'importent pareil — l'appli les reconnaît toute seule et s'en sert pour voir à travers les lignes opaques. Le JSON de retour de Claude passe aussi par ici. Après chaque import, le détail complet : chaque opération, sa raison, son montant.",
 impsel:"<b>Choix du compte.</b> Laisse sur Auto : l'appli reconnaît le compte toute seule. Choisis un compte à la main seulement si le fichier a été renommé.",
 cptadm:"<b>Comptes suivis.</b> Ajoute un compte ici (nom, numéro, type, solde du jour) : toute l'appli s'adapte. Renomme avec ✎. On ne supprime pas un compte : un compte fermé n'a juste plus d'imports.",
-notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil.",
+notifs:"<b>Notifications.</b> Une fois activées sur un téléphone, elles arrivent même app fermée. Ce que tu recevras : chaque matin, la projection du jour (verte ou rouge). Le samedi matin, le point général de la semaine — aussi par email, le seul du système. Quand l'un de vous demande d'assouplir une cible, l'autre est prévenu dans l'heure. Import en retard : rappel à 7 jours, alarme à 14. Le 1er du mois : le bilan du mois fini, et le verdict du défi s'il y en a un. À chaque installation de l'app sur un téléphone, une notification confirme que tout est en place. Chacun active sur son propre téléphone, en un bouton. La croix retire un appareil. Si les notifications n\u2019arrivent que quand tu OUVRES l\u2019app : ton t\u00e9l\u00e9phone endort Chrome. Sur Honor : Param\u00e8tres \u2192 Applications \u2192 Chrome \u2192 Consommation d\u2019\u00e9nergie \u2192 d\u00e9sactiver la gestion automatique et autoriser le lancement automatique + l\u2019activit\u00e9 en arri\u00e8re-plan. \u00c0 faire sur les deux t\u00e9l\u00e9phones.",
 cheques:"<b>Chèques — talon numérique.</b> Chaque chèque débité est repéré par son numéro et son chéquier (le compte d'où il part : Paul, Claire, Commun). Un chèque non nommé apparaît en orange : indique le bénéficiaire ou l'objet, choisis la bonne catégorie, valide. Dès qu'il est nommé, il prend ce nom partout dans l'appli et rejoint la bonne enveloppe. C'est le talon de chéquier, en mieux : il ne se perd pas, et vous le voyez tous les deux.",
 fiab:"<b>Fiabilité des données.</b> L'appli se surveille elle-même. En tête : les anomalies qu'elle détecte toute seule (mouvement familial pris pour une dépense, écart de solde, trou dans les imports, chèques anonymes, débits inconnus). Quand il y en a, un bouton exporte tout en JSON : envoie ce fichier à Claude, il trouve la cause et corrige. En dessous, les trois contrôles permanents : les soldes (touche Vérifier, saisis le solde exact de la banque, l'écart s'affiche) et les débits non classés.",
 imphisto:"<b>Historique des imports.</b> Qui a importé quoi, quand, et combien d'opérations nouvelles. La mémoire du rituel du samedi.",
@@ -2152,6 +2427,9 @@ devlog:"<b>Journal de développement.</b> Toute la vie de l'appli, version par v
 cibles:"<b>Cibles en vigueur.</b> Les chiffres que toute l'appli utilise en ce moment. Ils vivent dans Firebase, pas dans le code. Pour les changer : le verrou ci-dessous. Tout changement est noté au journal.",
 reglesnom:"<b>Regles de nommage.</b> La memoire de l'appli : chaque renommage ou import cree une regle ici, qui s'applique a tout l'historique et aux imports futurs. Filtre, et retire une regle fausse (les operations repassent en Non classe).",
 tickets:"<b>Tickets.</b> Le relevé bancaire dit combien tu as payé ; le ticket dit ce que tu as acheté. Avec Google Lens : photo, Sélectionner du texte, Copier — puis Coller un ticket ici. L'appli lit le total, les articles, et pour un plein les litres et le prix au litre. Elle propose de le rattacher à l'opération bancaire correspondante (même montant, même période). Le texte brut est toujours conservé : si le décodage est imparfait, envoie-le à Claude pour l'affiner.",
+reserves:"<b>Argent réservé.</b> Une partie de l'épargne appartient déjà à un projet : l'indemnité du sinistre aux travaux, la provision granulés au chauffage. Réserver une somme ne déplace pas l'argent — elle dit à l'appli de ne plus la compter comme disponible. La trajectoire, les paliers et la date à zéro se calculent sur l'épargne VRAIMENT libre. C'est la différence entre « on a 31 000 € » et la vérité.",
+salaires:"<b>Salaires.</b> Les virements DRFIP portent le mois de rémunération dans leur libellé — l'appli les suit par personne : dernier montant, mois concerné, écart par rapport à la moyenne des 12 derniers. Une variation inhabituelle (prime, retenue, erreur) saute aux yeux immédiatement.",
+liquide:"<b>Liquide à classer.</b> Un retrait d'espèces est de l'argent qui disparaît des relevés. Ici, tu dis ce qu'il est devenu : une part pour la baby-sitter, une pour le marché, un ticket espèces rattaché… Chaque part rejoint sa vraie catégorie dans les dépenses du mois. Ce qui n'est pas classé reste affiché « en poche » — sans jugement, et sans comptabilité du moindre billet : à gros grain.",
 pending:"<b>Demandes en cours.</b> Chaque demande d'assouplissement s'affiche ici, chez vous deux, avec un compte à rebours de 72 h. Trois sorties : tu annules (tout de suite, toujours possible) · l'autre approuve depuis son téléphone (tout de suite) · le délai passe ET tu confirmes. Si tu ne reviens pas confirmer, rien ne change.",
 verrou:"<b>Verrou intelligent.</b> DURCIR une cible (dépenser moins, épargner plus) : tout de suite. L'ADOUCIR (dépenser plus, épargner moins) : 72 h d'attente + confirmation, ou l'accord de l'autre. On n'approuve jamais sa propre demande. Tout est noté au journal, avec le nom et la date.",
 defi:"<b>Défi en cours.</b> Un engagement pris depuis l'onglet Simu : dépenser moins qu'un plafond, pendant un nombre de mois donné. Le défi démarre le 1er du mois suivant. Chaque mois passé est jugé : tenu ou raté, avec le montant. TOUT compte, même l'imprévu — c'est le principe d'un défi court. Le compteur 'dégagé' fait la somme de ce que tu as vraiment mis de côté par rapport à la cible normale. À la fin : réussi ou manqué, et ça reste dans l'historique — l'abandon aussi. Un seul défi à la fois. Claire voit tout.",
@@ -2204,7 +2482,7 @@ else document.getElementById('ovlSetup').classList.remove('show');
 document.getElementById('curDate').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 updateBlocage();consommerPartage();
 const _g=Math.round(gainsEngages()*100)/100;if(D._lastG!==_g){D._lastG=_g;if(FB_ON)fbdb.ref('budget/cache/gains').set(_g)}
-buildAccSel();updateProjection();updateResteVivre();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();updateCfgSpans();updateDevlog();updateTutoMenu();updateReglesPanel();updateAddCompte();updateTickets();consommerPartageTexte();if(!D._tutoP){D._tutoP=1;setTimeout(proposerTuto,1200)}
+buildAccSel();updateProjection();updateResteVivre();updateTraj();updateEnv();updateListes();updateComptes();updateActions();updateAlertImport();updateRW();updateEng();updateScore();updateCptAdmin();updateCibles();updateJournal();updateDefi();updateNotifs();updateCheques();updateFiab();updateHistos();updateAnomAlert();updateCfgSpans();updateDevlog();updateTutoMenu();updateReglesPanel();updateAddCompte();updateTickets();updateReserves();updateSalaires();updateLiquide();consommerPartageTexte();if(!D._tutoP){D._tutoP=1;setTimeout(proposerTuto,1200)}
 if(document.getElementById('pMois').classList.contains('active'))drawCharts();updateScen()}
 async function checkVersion(){
 const dot=document.getElementById('verDot'),txt=document.getElementById('verTxt');
