@@ -40,7 +40,9 @@
             ".txt"
           ]
         }
-      ]
+      ],
+      "title": "title",
+      "text": "text"
     }
   }
 }
