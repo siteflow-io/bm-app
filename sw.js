@@ -18,7 +18,7 @@ try{
     const n=p.notification||p.data||{};
     self.registration.showNotification(n.title||'Budget Meney',{
       body:n.body||'',icon:'icon-192.png',badge:'icon-192.png',
-      tag:'budget-'+(n.title||''),renotify:true,
+      tag:'budget-meney',renotify:true,
       data:{url:self.registration.scope}
     });
   });
@@ -34,7 +34,7 @@ self.addEventListener('push',e=>{
   e.waitUntil(self.registration.getNotifications().then(list=>{
     if(list.some(x=>x.title===n.title&&x.body===n.body))return;
     return self.registration.showNotification(n.title||'Budget Meney',{
-      body:n.body||'',icon:'icon-192.png',badge:'icon-192.png',data:{url:self.registration.scope}});
+      body:n.body||'',icon:'icon-192.png',badge:'icon-192.png',tag:'budget-meney',renotify:true,data:{url:self.registration.scope}});
   }));
 });
 
