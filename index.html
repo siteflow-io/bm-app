@@ -466,7 +466,7 @@ select.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-ra
 <script>
 /* ================= CONFIG ================= */
 /* À REMPLIR après création du projet Firebase sur polomeney@gmail.com (voir README). Laisser vide = mode local. */
-const APP_VERSION=26; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
+const APP_VERSION=27; /* incr\u00e9ment\u00e9 \u00e0 chaque livraison */
 const FIREBASE_CONFIG={
 apiKey:"AIzaSyAKrv6HrM7QhXrFmO-F0PVJ9B6nTFKCkR0",
 authDomain:"budget-meney.firebaseapp.com",
@@ -481,6 +481,9 @@ appId:"1:999394751928:web:111461399fe73a6a2c8b4d"
    pour les cibles (une app flagellante ne se désarme pas d'un tap). */
 /* Journal de d\u00e9veloppement : \u00e9crit par l’assistant \u00e0 CHAQUE livraison (origine, changements, consignes post-push). */
 const DEVLOG=[
+{v:27,date:'2026-07-21',origine:"D\u00e9cision de Paul : une vraie app Android, ind\u00e9pendante de Chrome",
+ch:["L'appli existe d\u00e9sormais en APPLICATION ANDROID install\u00e9e (APK) : ses notifications passent par Google Play Services, jamais gel\u00e9 par le t\u00e9l\u00e9phone \u2014 contrairement \u00e0 Chrome","Activer les notifications dans l'app native enregistre un jeton NATIF ; le serveur lui envoie un message Android prioritaire","La carte Notifications indique d\u00e9sormais o\u00f9 tu tournes : app native (fiable) ou navigateur (d\u00e9pendant de Chrome)","Canal de secours ntfy retir\u00e9 : plus n\u00e9cessaire"],
+cons:["Dans l'app install\u00e9e : Comptes \u2192 Notifications \u2192 Activer sur cet appareil (\u00e0 refaire une fois, c'est un nouveau canal)","Sur les deux t\u00e9l\u00e9phones. L'ancienne ic\u00f4ne install\u00e9e depuis Chrome peut \u00eatre retir\u00e9e une fois la native valid\u00e9e"]},
 {v:26,date:'2026-07-19',origine:"Paul : ce poste s'appellera Service num\u00e9rique, partout",
 ch:["Le libell\u00e9 \u00ab Service num\u00e9rique \u00bb remplace l'ancien nom du poste d'abonnement num\u00e9rique, partout : r\u00e8gles, listes, vue par enseigne, souvenirs, aides","Les r\u00e8gles perso d\u00e9j\u00e0 en base portant l'ancien nom sont r\u00e9\u00e9crites automatiquement au chargement","Les textes de l'appli parlent d\u00e9sormais de \u00ab l'analyse ext\u00e9rieure \u00bb et de \u00ab l'assistant \u00bb"],
 cons:["Le libell\u00e9 BANCAIRE brut reste visible dans le d\u00e9tail d'une fiche : c'est la donn\u00e9e source du relev\u00e9, l'appli ne r\u00e9\u00e9crit jamais la banque"]},
@@ -1630,9 +1633,30 @@ notifLocale('\u2705 Budget Meney install\u00e9','Ic\u00f4ne pos\u00e9e sur l\u20
 if(!ok)localStorage.setItem('pendingGreet','1')})});
 const VAPID_KEY="BLra4Sn5vZsc2Z0-46r9a2K40Cxq9Liu0Tdl1e_2sf-8o-yua5lqcEVueENXmLhJf-BOFK2zQPt3TeXNKRmo1cg";
 function tokId(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return't'+h.toString(36)}
+/* ---- Coquille native Android (Capacitor) ----
+   Dans l'app installée par APK, les notifications passent par Google Play Services,
+   jamais gelé par les surcouches constructeur — contrairement à Chrome. On enregistre
+   alors un jeton NATIF, marqué comme tel pour que le serveur lui adresse un payload android. */
+function estNatif(){return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())}
+async function activerNotifsNatif(){
+const PN=window.Capacitor.Plugins.PushNotifications;
+if(!PN){alert('Module de notifications absent de cette version de l\u2019app. Réinstalle le dernier APK.');return}
+const perm=await PN.requestPermissions();
+if(perm.receive!=='granted'){alert('Permission refusée. Active les notifications de Budget dans les réglages du téléphone.');return}
+PN.addListener('registration',t=>{
+const tk=t&&t.value;if(!tk)return;
+write('fcmTokens/'+tokId(tk),{token:tk,email:userEmail(),ua:'Android natif',natif:true,ts:Date.now()});
+localStorage.setItem('fcmTok',tokId(tk));
+updateNotifs();
+alert('Notifications natives activées sur cet appareil.');});
+PN.addListener('registrationError',e=>alert('Erreur d\u2019enregistrement : '+JSON.stringify(e)));
+/* app au premier plan : Android n'affiche rien tout seul, on relaie */
+PN.addListener('pushNotificationReceived',n=>{try{notifLocale((n&&n.title)||'Budget Meney',(n&&n.body)||'')}catch(e){}});
+await PN.register();}
 async function activerNotifs(){
+if(estNatif())return activerNotifsNatif();
 if(!FB_ON){alert('Les notifications n\u00e9cessitent le mode Firebase.');return}
-if(!('Notification'in window)){alert('Ce navigateur ne g\u00e8re pas les notifications.');return}
+if(!estNatif()&&!('Notification'in window)){alert('Ce navigateur ne g\u00e8re pas les notifications.');return}
 try{
 const perm=await Notification.requestPermission();
 if(perm!=='granted'){alert('Permission refus\u00e9e. Active-la dans les r\u00e9glages du navigateur.');return}
@@ -1651,6 +1675,10 @@ await notifLocale(pend?'\u2705 Budget Meney install\u00e9 et notifications activ
 updateNotifs()}catch(e){alert('Erreur : '+e.message)}}
 function retirerAppareil(id){
 if(confirm('Retirer cet appareil ? Il ne recevra plus de notifications.'))write('fcmTokens/'+id,null)}
+async function badgeSupport(){
+return estNatif()
+?'<div style="font-size:11px;font-weight:800;color:#16a34a;margin-bottom:6px">\u25cf App native Android \u2014 notifications par Play Services (ind\u00e9pendantes de Chrome)</div>'
+:'<div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px">\u25cb Version navigateur \u2014 les notifications d\u00e9pendent de Chrome. L\'app install\u00e9e par APK est plus fiable.</div>'}
 async function etatSW(){
 try{
 const regs=await navigator.serviceWorker.getRegistrations();
@@ -1662,10 +1690,11 @@ return{ok:okPush,txt:okPush?'Service worker actif ('+actif.join(', ')+') \u2014 
 function updateNotifs(){
 const st=document.getElementById('notifStatus');const dv=document.getElementById('notifDevices');
 if(!st)return;
-etatSW().then(s=>{const el=document.getElementById('swEtat');if(el)el.innerHTML='<span style="color:'+(s.ok?'var(--green)':'var(--red)')+'">\u25cf</span> '+s.txt});
+etatSW().then(s=>{const el=document.getElementById('swEtat');if(!el)return;
+el.innerHTML=badgeSupport()+(estNatif()?'':'<span style="color:'+(s.ok?'var(--green)':'var(--red)')+'">\u25cf</span> '+s.txt);});
 const toks=Object.entries(D.fcmTokens||{});
 const mine=localStorage.getItem('fcmTok');
-const actif=mine&&toks.some(([id])=>id===mine)&&Notification.permission==='granted';
+const actif=mine&&toks.some(([id])=>id===mine)&&(estNatif()||(('Notification'in window)&&Notification.permission==='granted'));
 st.textContent=actif?'Activ\u00e9es sur cet appareil \u2713':'Pas encore activ\u00e9es sur cet appareil.';
 document.getElementById('btnNotif').style.display=actif?'none':'block';
 dv.innerHTML=toks.map(([id,t])=>`<div class="row"><div class="row-l">${t.email===userEmail()?'Toi':t.email}<span style="font-weight:500;color:var(--text-muted)"> \u00b7 ${/Android/i.test(t.ua)?'Android':/iPhone|iPad/i.test(t.ua)?'iPhone':'PC'} \u00b7 ${new Date(t.ts).toLocaleDateString('fr-FR')}</span></div><div class="row-v" style="cursor:pointer;color:var(--red)" onclick=\"retirerAppareil('${id}')\">\u2715</div></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted);font-weight:600">Aucun appareil enregistr\u00e9.</div>'}
